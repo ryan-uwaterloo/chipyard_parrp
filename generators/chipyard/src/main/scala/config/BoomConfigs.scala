@@ -1,6 +1,7 @@
 package chipyard
 
 import org.chipsalliance.cde.config.{Config}
+import paarp_chisel._
 
 // ---------------------
 // BOOM Configs
@@ -26,6 +27,11 @@ class MegaBoomConfig extends Config(
 
 class DualSmallBoomConfig extends Config(
   new boom.common.WithNSmallBooms(2) ++                          // 2 boom cores
+  new paarp_chisel.subsystem.WithInclusiveCache ++       // local chisel code L2 cache
+  new chipyard.config.AbstractConfig)
+
+class PaarpOnlyConfig extends Config(
+  new paarp_chisel.subsystem.WithInclusiveCache ++
   new chipyard.config.AbstractConfig)
 
 class Cloned64MegaBoomConfig extends Config(

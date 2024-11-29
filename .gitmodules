@@ -148,3 +148,9 @@
 [submodule "generators/rocket-chip-inclusive-cache"]
 	path = generators/rocket-chip-inclusive-cache
 	url = https://github.com/chipsalliance/rocket-chip-inclusive-cache.git
+[submodule "generators/paarp_chisel"]
+	path = generators/paarp_chisel
+	url = https://git.uwaterloo.ca/r6ellis/paarp_chisel.git
+[submodule "tools/verif"]
+	path = tools/verif
+	url = https://github.com/TsaiAnson/verif.git

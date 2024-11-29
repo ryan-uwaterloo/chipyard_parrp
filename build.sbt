@@ -114,16 +114,18 @@ lazy val rocketMacros  = (project in rocketChipDir / "macros")
   )
 
 lazy val rocketchip = freshProject("rocketchip", rocketChipDir)
-  .dependsOn(hardfloat, rocketMacros, cde)
+  .dependsOn(hardfloat, rocketMacros, cde, chiseltest)
   .settings(commonSettings)
   .settings(chiselSettings)
   .settings(
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "mainargs" % "0.5.0",
+      "com.lihaoyi" %% "sourcecode" % "0.4.2",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.json4s" %% "json4s-jackson" % "4.0.5",
       "org.scalatest" %% "scalatest" % "3.2.0" % "test",
-      "org.scala-graph" %% "graph-core" % "1.13.5"
+      "org.scala-graph" %% "graph-core" % "1.13.5",
+      //"edu.berkeley.cs" %% "chiseltest" % "0.6.2",
     )
   )
   .settings( // Settings for scalafix
@@ -150,7 +152,8 @@ lazy val chipyard = (project in file("generators/chipyard"))
     sha3, // On separate line to allow for cleaner tutorial-setup patches
     dsptools, rocket_dsp_utils,
     gemmini, icenet, tracegen, cva6, nvdla, sodor, ibex, fft_generator,
-    constellation, mempress, barf, shuttle, caliptra_aes)
+    constellation, mempress, barf, shuttle, caliptra_aes,
+    paarp_chisel)
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(
     libraryDependencies ++= Seq(
@@ -257,12 +260,12 @@ lazy val fixedpoint = (project in file("./tools/fixedpoint/"))
   .settings(commonSettings)
 
 lazy val dsptools = freshProject("dsptools", file("./tools/dsptools"))
-  .dependsOn(fixedpoint)
+  .dependsOn(fixedpoint, rocketchip, chiseltest)
   .settings(
     chiselSettings,
     commonSettings,
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chiseltest" % "0.6.0",
+      //"edu.berkeley.cs" %% "chiseltest" % "0.6.2",
       "org.scalatest" %% "scalatest" % "3.2.+" % "test",
       "org.typelevel" %% "spire" % "0.18.0",
       "org.scalanlp" %% "breeze" % "2.1.0",
@@ -311,3 +314,67 @@ lazy val fpga_shells = (project in file("./fpga/fpga-shells"))
 lazy val fpga_platforms = (project in file("./fpga"))
   .dependsOn(chipyard, fpga_shells)
   .settings(commonSettings)
+
+lazy val paarp_chisel = (project in file("generators/paarp_chisel"))  
+  .dependsOn(rocketchip)
+  .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(commonSettings)
+
+val directoryLayout = Seq(
+  scalaSource in Compile := baseDirectory.value / "src",
+  javaSource in Compile := baseDirectory.value / "src",
+  resourceDirectory in Compile := baseDirectory.value / "resources",
+  scalaSource in Test := baseDirectory.value / "test",
+  resourceDirectory in Test := baseDirectory.value / "resources",
+)
+
+val verifSettings = Seq(
+  resolvers ++= Seq(
+    Resolver.sonatypeRepo("snapshots"),
+    Resolver.sonatypeRepo("releases"),
+    Resolver.mavenLocal
+  ),
+  scalacOptions := Seq("-deprecation", "-unchecked", "-Xsource:2.11", "-language:reflectiveCalls"),
+  //libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.6.2",
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.+" % "test",
+  libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.2.3"
+)
+
+lazy val verifCore = (project in file("./tools/verif/core"))
+  .settings(directoryLayout)
+  //.sourceDependency(chiselRef, chiselLib)
+  .dependsOn(rocketchip, chiseltest)
+  .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(commonSettings)
+
+lazy val verifTL = (project in file("./tools/verif/tilelink"))
+  .settings(directoryLayout)
+  //.sourceDependency(chiselRef, chiselLib)
+  .dependsOn(rocketchip, chipyard, dsptools, verifCore, chiseltest)
+  .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(commonSettings)
+
+lazy val verifGemmini = (project in file("./tools/verif/cosim"))
+  .settings(directoryLayout)
+  //.sourceDependency(chiselRef, chiselLib)
+  .dependsOn(rocketchip, chipyard, dsptools, gemmini, verifCore)
+  .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(commonSettings)
+  .settings(libraryDependencies += "com.google.protobuf" % "protobuf-java" % "3.11.0")
+  .settings(libraryDependencies += "com.google.protobuf" % "protobuf-java-util" % "3.14.0")
+
+lazy val chiseltest = (project in file ("./generators/rocket-chip/dependencies/chiseltest4chipyard"))
+  .settings(directoryLayout)
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "mainargs" % "0.5.0",
+      "com.lihaoyi" %% "sourcecode" % "0.4.2",
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "4.0.5",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test",
+      "org.scala-graph" %% "graph-core" % "1.13.5",
+      //"edu.berkeley.cs" %% "chiseltest" % "0.6.2",
+    ))
+
+  fork in test := true
