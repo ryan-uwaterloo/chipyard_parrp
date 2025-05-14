@@ -1,7 +1,7 @@
 package chipyard
 
 import org.chipsalliance.cde.config.{Config}
-import paarp_chisel._
+import parrp_chisel._
 
 // ---------------------
 // BOOM Configs
@@ -27,11 +27,23 @@ class MegaBoomConfig extends Config(
 
 class DualSmallBoomConfig extends Config(
   new boom.common.WithNSmallBooms(2) ++                          // 2 boom cores
-  new paarp_chisel.subsystem.WithInclusiveCache ++       // local chisel code L2 cache
+  new parrp_chisel.subsystem.WithInclusiveCache ++       // local chisel code L2 cache
+  new freechips.rocketchip.subsystem.WithoutTLMonitors ++
+  //new chipyard.harness.WithSerialTLTiedOff ++ doesn't remove the monitor HW but makes it so you can't communicate with the UART
+  new chipyard.config.AbstractConfig)
+
+class DualLargeBoomConfig extends Config(
+  new boom.common.WithNLargeBooms(2) ++                          // 2 boom cores
+  new parrp_chisel.subsystem.WithInclusiveCache ++       // local chisel code L2 cache
+  new chipyard.config.AbstractConfig)
+
+class DualRTBoomConfig extends Config( //class for RT-capable BOOM platform
+  new boom.common.WithNRTBooms(2) ++
+  new parrp_chisel.subsystem.WithInclusiveCache() ++ //try dropping capacity a lot to get fewer sets and stuff
   new chipyard.config.AbstractConfig)
 
 class PaarpOnlyConfig extends Config(
-  new paarp_chisel.subsystem.WithInclusiveCache ++
+  new parrp_chisel.subsystem.WithInclusiveCache ++
   new chipyard.config.AbstractConfig)
 
 class Cloned64MegaBoomConfig extends Config(

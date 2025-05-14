@@ -37,6 +37,9 @@ else
 SEED_FLAG=
 endif
 
+FAIL_DOC ?= generated-src/chipyard.harness.TestHarness.DualSmallBoomConfig/chipyard.harness.TestHarness.DualSmallBoomConfig.debug/VTestDriver__Trace__8__Slow.cpp
+FAIL_DOC2 ?= generated-src/chipyard.harness.TestHarness.DualSmallBoomConfig/chipyard.harness.TestHarness.DualSmallBoomConfig.debug/VTestDriver__Trace__9__Slow.cpp
+
 .PHONY: default debug
 default: $(sim)
 debug: $(sim_debug)
@@ -232,3 +235,33 @@ clean-sim:
 
 clean-sim-debug:
 	rm -rf $(model_dir_debug) $(sim_debug)
+
+TARGET ?= run-binary-debug 
+CONFIG=DualSmallBoomConfig
+BINARY=mt-code
+TEST ?= test
+LOADMEM ?=
+
+FIX_DIR=generated-src/chipyard.harness.TestHarness.$(CONFIG)/chipyard.harness.TestHarness.$(CONFIG).debug
+
+binary_debug_fix: 
+	riscv64-unknown-elf-gcc -fno-common -fno-builtin-printf -specs=htif_nano.specs -c $(BINARY).c
+	riscv64-unknown-elf-gcc -static -specs=htif_nano.specs $(BINARY).o -o $(BINARY).riscv
+	@echo "Running 'make CONFIG=$(CONFIG) $(TARGET) BINARY=$(BINARY)'' (expected to fail)..."
+	@echo "gcc build complete."
+	-make -j8 CONFIG=$(CONFIG) $(TARGET) BINARY=$(BINARY).riscv LOADMEM=$(LOADMEM) VERILATOR_THREADS=16 || ( \
+		echo "First attempt failed. Applying fix..." && \
+		python3 run_debug_fix.py $(FIX_DIR) && \
+		echo "Fix applied. Retrying..." && \
+		make -j8 CONFIG=$(CONFIG) $(TARGET) BINARY=$(BINARY).riscv LOADMEM=$(LOADMEM) VERILATOR_THREADS=16 \
+	)
+	@echo "simulation complete, running vcd2fst."
+	vcd2fst output/chipyard.harness.TestHarness.$(CONFIG)/$(BINARY).vcd output/chipyard.harness.TestHarness.$(CONFIG)/$(BINARY)_$(TEST).fst
+
+fst:
+	vcd2fst output/chipyard.harness.TestHarness.$(CONFIG)/$(BINARY).vcd output/chipyard.harness.TestHarness.$(CONFIG)/$(BINARY)_$(TEST).fst
+
+spike:
+	riscv64-unknown-elf-gcc -fno-common -fno-builtin-printf -specs=htif_nano.specs -c $(BINARY).c
+	riscv64-unknown-elf-gcc -static -specs=htif_nano.specs $(BINARY).o -o $(BINARY).riscv
+	spike $(BINARY).riscv

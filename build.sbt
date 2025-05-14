@@ -153,7 +153,7 @@ lazy val chipyard = (project in file("generators/chipyard"))
     dsptools, rocket_dsp_utils,
     gemmini, icenet, tracegen, cva6, nvdla, sodor, ibex, fft_generator,
     constellation, mempress, barf, shuttle, caliptra_aes,
-    paarp_chisel)
+    parrp_chisel)
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(
     libraryDependencies ++= Seq(
@@ -315,7 +315,7 @@ lazy val fpga_platforms = (project in file("./fpga"))
   .dependsOn(chipyard, fpga_shells)
   .settings(commonSettings)
 
-lazy val paarp_chisel = (project in file("generators/paarp_chisel"))  
+lazy val parrp_chisel = (project in file("generators/parrp_chisel"))  
   .dependsOn(rocketchip)
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(commonSettings)
@@ -325,7 +325,7 @@ val directoryLayout = Seq(
   javaSource in Compile := baseDirectory.value / "src",
   resourceDirectory in Compile := baseDirectory.value / "resources",
   scalaSource in Test := baseDirectory.value / "test",
-  resourceDirectory in Test := baseDirectory.value / "resources",
+  resourceDirectory in Test := baseDirectory.value / "test"/ "resources",
 )
 
 val verifSettings = Seq(
