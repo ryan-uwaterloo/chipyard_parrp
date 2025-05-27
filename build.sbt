@@ -353,6 +353,15 @@ lazy val verifTL = (project in file("./tools/verif/tilelink"))
   .dependsOn(rocketchip, chipyard, dsptools, verifCore, chiseltest)
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(commonSettings)
+  .settings(libraryDependencies += "com.google.protobuf" % "protobuf-java" % "3.11.0")
+  .settings(libraryDependencies += "com.google.protobuf" % "protobuf-java-util" % "3.14.0")
+  .settings(libraryDependencies += "org.scala-lang" % "scala-reflect" % "3.11.0")
+  .settings(
+    PB.targets in Compile := Seq(
+      PB.gens.java -> (sourceManaged in Compile).value / "protobuf_java"
+    ),
+    PB.protoSources in Compile += baseDirectory.value / "src" / "proto"
+  )
 
 lazy val verifGemmini = (project in file("./tools/verif/cosim"))
   .settings(directoryLayout)

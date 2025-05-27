@@ -3,3 +3,6 @@
 !Makefile
 !verilator.mk
 !dramsim2_ini
+!mt-code.c
+!run_debug_fix.py
+!test2.c
