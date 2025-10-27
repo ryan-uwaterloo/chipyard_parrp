@@ -1,0 +1,19 @@
+channel ,opcode       ,param ,source ,address ,data
+A       ,AcquireBlock ,    0 ,     0 ,0x000   ,0x0001
+A       ,AcquireBlock ,    0 ,     1 ,0x080   ,0x0801
+A       ,AcquireBlock ,    0 ,     2 ,0x100   ,0x1001
+A       ,AcquireBlock ,    0 ,     3 ,0x180   ,0x1801
+A       ,AcquireBlock ,    0 ,     6 ,0x200   ,0x2001
+A       ,AcquireBlock ,    0 ,     7 ,0x280   ,0x2801
+A       ,AcquireBlock ,    0 ,     8 ,0x300   ,0x3001
+A       ,AcquireBlock ,    0 ,     9 ,0x380   ,0x3801
+A       ,AcquireBlock ,    0 ,     0 ,0x400   ,0x4001
+A       ,AcquireBlock ,    0 ,     6 ,0x480   ,0x4801
+A       ,AcquireBlock ,    0 ,     1 ,0x500   ,0x5001
+A       ,AcquireBlock ,    0 ,     7 ,0x580   ,0x5801
+A       ,AcquireBlock ,    0 ,     2 ,0x600   ,0x6001
+A       ,AcquireBlock ,    0 ,     8 ,0x680   ,0x6801
+A       ,AcquireBlock ,    0 ,     3 ,0x700   ,0x7001
+A       ,AcquireBlock ,    0 ,     9 ,0x780   ,0x7801
+A       ,AcquireBlock ,    0 ,     4 ,0x800   ,0x8001
+A       ,AcquireBlock ,    0 ,    10 ,0x880   ,0x8801

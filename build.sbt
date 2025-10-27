@@ -3,6 +3,7 @@ import Tests._
 // This gives us a nicer handle to the root project instead of using the
 // implicit one
 lazy val chipyardRoot = Project("chipyardRoot", file("."))
+lazy val traceBaseDir = settingKey[File]("Base directory containing trace data files")
 
 // keep chisel/firrtl specific class files, rename other conflicts
 val chiselFirrtlMergeStrategy = CustomMergeStrategy.rename { dep =>
@@ -153,7 +154,7 @@ lazy val chipyard = (project in file("generators/chipyard"))
     dsptools, rocket_dsp_utils,
     gemmini, icenet, tracegen, cva6, nvdla, sodor, ibex, fft_generator,
     constellation, mempress, barf, shuttle, caliptra_aes,
-    parrp_chisel)
+    parrp_chisel, verifTL, verifCore)
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(
     libraryDependencies ++= Seq(
@@ -350,7 +351,7 @@ lazy val verifCore = (project in file("./tools/verif/core"))
 lazy val verifTL = (project in file("./tools/verif/tilelink"))
   .settings(directoryLayout)
   //.sourceDependency(chiselRef, chiselLib)
-  .dependsOn(rocketchip, chipyard, dsptools, verifCore, chiseltest)
+  .dependsOn(rocketchip, dsptools, verifCore, chiseltest, boom, parrp_chisel, rocket_dsp_utils)
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(commonSettings)
   .settings(libraryDependencies += "com.google.protobuf" % "protobuf-java" % "3.11.0")
@@ -394,3 +395,12 @@ lazy val chiseltest = (project in file ("./generators/rocket-chip/dependencies/c
     ))
 
   fork in test := true
+
+  // Default base directory for trace data (can be overridden)
+  ThisBuild / traceBaseDir := (ThisBuild / baseDirectory).value / "traces"
+
+  Compile / run := {
+    val base = (ThisBuild / traceBaseDir).value
+    println(s"Using trace base directory: $base")
+    (Compile / run).evaluated
+  }

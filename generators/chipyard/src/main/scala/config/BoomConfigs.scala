@@ -2,10 +2,17 @@ package chipyard
 
 import org.chipsalliance.cde.config.{Config}
 import parrp_chisel._
+import verif.etrace._
 
 // ---------------------
 // BOOM Configs
 // ---------------------
+
+class TraceCosimConfig extends Config(
+  new freechips.rocketchip.subsystem.BaseSubsystemConfig ++
+  new verif.etrace.WithNTraces(4) ++
+  new parrp_chisel.subsystem.WithInclusiveCache(nWays = 4, capacityKB = 8) ++
+  new freechips.rocketchip.subsystem.WithoutTLMonitors)
 
 class SmallBoomConfig extends Config(
   new boom.common.WithNSmallBooms(1) ++                          // small boom config
@@ -39,7 +46,7 @@ class DualLargeBoomConfig extends Config(
 
 class DualRTBoomConfig extends Config( //class for RT-capable BOOM platform
   new boom.common.WithNRTBooms(2) ++
-  new parrp_chisel.subsystem.WithInclusiveCache() ++ //try dropping capacity a lot to get fewer sets and stuff
+  new parrp_chisel.subsystem.WithInclusiveCache(nWays = 4, capacityKB = 8) ++ //try dropping capacity a lot to get fewer sets and stuff
   new chipyard.config.AbstractConfig)
 
 class PaarpOnlyConfig extends Config(

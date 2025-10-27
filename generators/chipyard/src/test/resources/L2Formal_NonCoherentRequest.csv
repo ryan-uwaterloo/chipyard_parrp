@@ -1,0 +1,3 @@
+channel, opcode        , param, source, address, data
+A      , Get           ,     0,      0, 0x000  , 0x0001
+A      , PutPartialData,     0,      0, 0x000  , 0x0002

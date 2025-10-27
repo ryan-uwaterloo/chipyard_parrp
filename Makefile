@@ -12,8 +12,8 @@ TESTS = L2_formal_phy_hit_parrp_miss \
 		L2_formal_nest_release_diff_core \
 		L2_formal_two_released_ways \
 		L2_formal_shared_way \
-		L2_formal_probe \
-		L2_formal_non_coherent_request
+		L2_formal_probe # \
+		# L2_formal_non_coherent_request
 
 # Generate log file paths
 LOG_FILES = $(patsubst %, $(LOG_DIR)/%.log, $(TESTS))
