@@ -44,10 +44,10 @@ class DualLargeBoomConfig extends Config(
   new parrp_chisel.subsystem.WithInclusiveCache ++       // local chisel code L2 cache
   new chipyard.config.AbstractConfig)
 
-class DualRTBoomConfig extends Config( //class for RT-capable BOOM platform
-  new boom.common.WithNRTBooms(2) ++
-  new parrp_chisel.subsystem.WithInclusiveCache(nWays = 4, capacityKB = 8) ++ //try dropping capacity a lot to get fewer sets and stuff
-  new chipyard.config.AbstractConfig)
+// class DualRTBoomConfig extends Config( //class for RT-capable BOOM platform
+//   new boom.common.WithNRTBooms(2) ++
+//   new parrp_chisel.subsystem.WithInclusiveCache(nWays = 4, capacityKB = 8) ++ //try dropping capacity a lot to get fewer sets and stuff
+//   new chipyard.config.AbstractConfig)
 
 class PaarpOnlyConfig extends Config(
   new parrp_chisel.subsystem.WithInclusiveCache ++
