@@ -34,7 +34,7 @@ class NonBlockingTraceGenConfig extends Config(
 
 class BoomTraceGenConfig extends Config(
   new tracegen.WithBoomTraceGen()(List.fill(2) { DCacheParams(nMSHRs = 8, nSets = 16, nWays = 2) }) ++
-  new paarp_chisel.subsystem.WithInclusiveCache ++
+  new parrp_chisel.subsystem.WithInclusiveCache ++
   new AbstractTraceGenConfig)
 
 class NonBlockingTraceGenL2Config extends Config(
