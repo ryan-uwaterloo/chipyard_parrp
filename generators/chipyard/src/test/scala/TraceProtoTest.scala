@@ -536,14 +536,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -709,14 +709,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -882,14 +882,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -1055,14 +1055,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -1228,14 +1228,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -1401,14 +1401,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -1574,14 +1574,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -1747,14 +1747,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -1920,14 +1920,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -2093,14 +2093,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
-          }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
@@ -2266,14 +2266,1917 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         clock = clock + 1
         for(i <- 0 until numTiles){
           // println(s"core $i here!")
-          if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
-            // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
-            println(s"Hey here's what's throwing you for a loop in core $i:")
-            dag(i).debug()
-            // if(i == (numTiles-1)){
-              throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
-            // }
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
           }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_ocean-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "ocean-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_radix-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "radix-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_fft-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "fft-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_lu-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "lu-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_cholesky-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "cholesky-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_barnes-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "barnes-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_fmm-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "fmm-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_radiosity-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "radiosity-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_raytrace-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "raytrace-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_water-nsquared-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "water-nsquared-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
+
+          // Step 1: Advance software model
+          dag(i).step()
+          idag(i).step()
+          issued_a_req(i) = false
+          inst_issued_a_req(i) = false
+          c.dcache_io(i).in.valid.poke(false.B)
+          c.icache_io(i).in.valid.poke(false.B)
+
+          // Step 2: Issue pending req if fifo ready
+          try{
+            c.dcache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            dag(i).getPendingReq.foreach { req =>
+              if(!issued_a_req(i)){ //if fifo is ready
+                // println(s"dag $i is trying to send a req!")
+                c.dcache_io(i).in.valid.poke(true.B)
+                c.dcache_io(i).in.bits.addr.poke(req.pAddr.get.U)
+                issued_a_req(i) = true //max 1 issue per cycle
+
+                if(req.nodeType == LOAD){
+                  // println(s"@ Cycle ${clock} Issuing LOAD ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  dag(i).issueLoad(req.seqNum)
+                } else if(req.nodeType == STORE){
+                  // println(s"@ Cycle ${clock} Issuing STORE ${req.seqNum} to hardware")
+                  c.dcache_io(i).in.bits.uop.uses_stq.poke(true.B)
+                  c.dcache_io(i).in.bits.uop.uses_ldq.poke(false.B)
+                  c.dcache_io(i).in.bits.uop.mem_cmd.poke("b00001".U) //int store :)
+                  c.dcache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                  c.dcache_io(i).in.bits.data.poke(req.seqNum.U) //make up some random data :)
+                  dag(i).issueStore(req.seqNum)
+                }
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }     
+
+          // Step 3: Check if hardware acknowledged anything
+          dag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(load.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeLoad(load.seqNum)
+              dag(i).log(s"DCache ${i}", load.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementLoadTime(load.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+          dag(i).getIssuedStores.foreach { store =>
+            try{
+              c.dcache_io(i).out.valid.expect(true.B)
+              c.dcache_io(i).out.bits.addr.expect(store.pAddr.get.U)
+              c.dcache_io(i).out.bits.load_n_store.expect(false.B)
+              Context().env.checkpoint()
+
+              dag(i).acknowledgeStore(store.seqNum)
+              dag(i).log(s"DCache ${i}", store.seqNum)
+            }catch{
+              case e: FailedExpectException =>
+              dag(i).incrementStoreTime(store.seqNum)
+              Context().env.batchedFailures.clear()
+            }
+          }
+
+          // Step 4: Issue ICache Req
+          try{
+            c.icache_io(i).in.ready.expect(true.B) //can we issue a request?
+            Context().env.checkpoint() //commit point (readout errors now)
+
+            idag(i).getPendingReq.foreach { req =>
+              if(!inst_issued_a_req(i)){ //if fifo is ready
+                // println(s"idag $i is trying to send a req!")
+                c.icache_io(i).in.valid.poke(true.B)
+                c.icache_io(i).in.bits.addr.poke(req.addr.U)
+                inst_issued_a_req(i) = true //max 1 issue per cycle
+
+                // println(s"@ Cycle ${clock} Issuing I-LOAD ${req.tick} to hardware")
+                c.icache_io(i).in.bits.uop.uses_stq.poke(false.B)
+                c.icache_io(i).in.bits.uop.uses_ldq.poke(true.B)
+                c.icache_io(i).in.bits.uop.mem_cmd.poke("b00000".U) //int load :)
+                c.icache_io(i).in.bits.uop.mem_signed.poke(false.B)
+                idag(i).issueLoad(req.tick)
+              }
+            }
+
+          }catch{
+            case e: FailedExpectException =>
+              // println(s"[FIFO not ready!]")
+              Context().env.batchedFailures.clear()
+          }
+
+          // Step 5: Check for completions on idag(i)
+          idag(i).getIssuedLoads.foreach { load =>
+            try{
+              c.icache_io(i).out.valid.expect(true.B)
+              c.icache_io(i).out.bits.addr.expect(load.addr.U)
+              c.icache_io(i).out.bits.load_n_store.expect(true.B)
+              Context().env.checkpoint()
+
+              idag(i).acknowledgeLoad(load.tick)
+              idag(i).log(s"ICache ${i}", load.tick)
+            }catch{
+              case e: FailedExpectException =>
+              idag(i).incrementLoadTime(load.tick)
+              Context().env.batchedFailures.clear()
+            }
+          }
+        }
+
+        // Step 6: Advance hardware clock
+        c.clock.step()
+        // if(clock == 40000L){
+        //   for (i <- 0 until numTiles){
+        //     println(s"Hey here's what's throwing you for a loop in core $i:")
+        //     dag(i).debug()
+        //   }
+        //   throw new NotImplementedError("finish writing the cosimulator xddd")
+        // }
+        // if (clock % 1000 == 5){ //try to clean up some artifacts and fight a memory leak LOL
+        //   c.backend.flush()
+        // }
+      }
+      //run the simulator for another 100 cycles to clear residuals.
+      c.clock.step(100)
+    }
+  }
+
+  it should "Run_watern-spatial-8" in {
+    // throw new NotImplementedError("skipme!")
+    var clock = 0x0L
+    val numTiles = 8
+    val testFolder = "water-spatial-8"
+    val dag = Seq.tabulate(numTiles){i => new ElasticTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.data_trace.proto.gz"))}
+    val idag = Seq.tabulate(numTiles){i =>new InstTraceDAG(TraceDataPath.path(s"$testFolder/system.cpu${i}.traceListener.inst_trace.proto.gz"))}
+    val config = new TraceCosimConfig
+    implicit val params = config.toInstance
+    val testHarness = LazyModule(new MulticoreTraceTileHarness(numTiles = numTiles, L2ways = 72, L2sets = 64, L2beatBytes = 16, L2blockBytes = 64))
+    var issued_a_req = mutable.Seq.fill(numTiles)(false)
+    var inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
+
+    // val top = LazyModule((params(chipyard.BuildTop))(params))
+    // test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+    test(testHarness.module).withAnnotations(Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)) { c =>
+      // test(testHarness.module) {c =>
+      // val traceTileCore0 = new TraceTile(params, RocketCrossingParams(), NoHartLookup)
+      c.clock.setTimeout(0)
+      
+      while (dag.exists(d => !d.isDone)) {
+        clock = clock + 1
+        for(i <- 0 until numTiles){
+          // println(s"core $i here!")
+          // if(idag(i).isDone){ //if we finish our accesses after itrace things are BAD!
+          //   // println("!!!!! INSTRUCTION dag(i) COMPLETE !!!!!")
+          //   println(s"Hey here's what's throwing you for a loop in core $i:")
+          //   dag(i).debug()
+          //   // if(i == (numTiles-1)){
+          //     throw new NotImplementedError(s"!!!!! INSTRUCTION dag${i} COMPLETE !!!!!")
+          //   // }
+          // }
 
           // Step 1: Advance software model
           dag(i).step()
