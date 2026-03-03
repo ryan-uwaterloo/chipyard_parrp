@@ -2242,7 +2242,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "Run_watern-spatial-4" in {
+  it should "Run_water-spatial-4" in {
     // throw new NotImplementedError("skipme!")
     var clock = 0x0L
     val numTiles = 4
@@ -4145,7 +4145,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "Run_watern-spatial-8" in {
+  it should "Run_water-spatial-8" in {
     // throw new NotImplementedError("skipme!")
     var clock = 0x0L
     val numTiles = 8

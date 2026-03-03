@@ -5,7 +5,7 @@ import csv
 import os
 from collections import defaultdict
 
-def parse_log(filepath, csv_out=None, debug=False):
+def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # Regex patterns
     sink_re = re.compile(
         r"@ clk_cycle\s+(\d+): New Sink ([ACX]) Request! opcode:\s*(\w+).*source:\s*(0x[0-9a-fA-F]+)",
@@ -16,16 +16,30 @@ def parse_log(filepath, csv_out=None, debug=False):
     stall_re = re.compile(
         r"@ clk_cycle\s+(\d+): ReleaseData prevented from entering SinkC due to no putbuff space!",
         re.IGNORECASE)
-    # NEW: completion line now includes opcode before "Request completed"
     complete_re = re.compile(
         r"@ clk_cycle\s+(\d+):\s*(\w+)\s+Request completed; sent to directory!\s*source:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    # L1 Regexes
+    l1_new_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New L1 Request! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
+    l1_data_re = re.compile(
+        r"@ clk_cycle\s+(\d+): L1 Request data sent to core! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
+    l1_free_re = re.compile(
+        r"@ clk_cycle\s+(\d+): L1 Request MSHR Free! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
+
 
     # --- State maps ---
     sink_times = {}       # (source, opcode) -> start_cycle
     request_meta = {}     # (source, opcode) -> metadata dict
     last_completion = {}  # (source, opcode) -> last completion cycle
     results = []          # [(source, opcode, start, end, latency, metadata, stalls)]
+    l1_start = {}         # (addr, core) -> cycle
+    l1_data = {}          # (addr, core) -> cycle
+    l1_results = []       # results list
+
 
     # --- Stall tracking ---
     release_stalls = defaultdict(lambda: {"last_cycle": None, "count": 0})
@@ -36,6 +50,7 @@ def parse_log(filepath, csv_out=None, debug=False):
     accepted_sink_c = 0
 
     DUPLICATE_COMPLETION_WINDOW = 2
+    COMPLETION_COOLDOWN = 4
 
     with open(filepath, "r") as f:
         for line_no, line in enumerate(f, 1):
@@ -48,6 +63,13 @@ def parse_log(filepath, csv_out=None, debug=False):
                 src = int(m[4], 16)
                 sink_key = (src, opcode)
 
+                last = last_completion.get(sink_key)
+
+                if last is not None and (cycle - last) <= COMPLETION_COOLDOWN:
+                    if debug:
+                        print(f"[line {line_no}] Ignoring tail beat after completion for {sink_key}")
+                    continue
+ 
                 # Sink C filtering
                 if sink_type == "C":
                     total_sink_c += 1
@@ -143,6 +165,63 @@ def parse_log(filepath, csv_out=None, debug=False):
                 last_completion[sink_key] = cycle
                 continue
 
+            # --- L1 new requests ---
+            if m := l1_new_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                core = int(m[3], 16)
+
+                key = (addr, core)
+
+                if key not in l1_start:
+                    l1_start[key] = cycle
+                    if debug:
+                        print(f"[line {line_no}] L1 NEW addr=0x{addr:X}, core=0x{core:X}, cycle={cycle}")
+                continue
+
+            # --- L1 data to core ---
+            if m := l1_data_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                core = int(m[3], 16)
+
+                key = (addr, core)
+                l1_data[key] = cycle
+
+                if debug:
+                    print(f"[line {line_no}] L1 DATA addr=0x{addr:X}, cycle={cycle}")
+                continue
+
+            if m := l1_free_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                core = int(m[3], 16)
+
+                key = (addr, core)
+
+                if key in l1_start:
+                    start = l1_start[key]
+                    latency = cycle - start
+                    data_cycle = l1_data.get(key)
+
+                    l1_results.append(
+                        (addr, core, start, data_cycle, cycle, latency)
+                    )
+
+                    if debug:
+                        print(f"[line {line_no}] L1 COMPLETE addr=0x{addr:X}, "
+                            f"start={start}, data={data_cycle}, end={cycle}, lat={latency}")
+
+                    del l1_start[key]
+                    l1_data.pop(key, None)
+
+                else:
+                    if debug:
+                        print(f"[line {line_no}] L1 completion unmatched addr=0x{addr:X}")
+
+                continue
+
+
     # --- Output summary ---
     header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'Metadata'}"
     print(header)
@@ -164,7 +243,7 @@ def parse_log(filepath, csv_out=None, debug=False):
                     meta.get('need_dram',''), meta.get('need_probe',''),
                     meta.get('evicting',''), meta.get('back_inv','')
                 ])
-        print(f"\n✅ Results with metadata written to {csv_out}")
+        print(f"\n Results with metadata written to {csv_out}")
 
     # --- Summary stats ---
     print(f"\nSummary:")
@@ -172,9 +251,46 @@ def parse_log(filepath, csv_out=None, debug=False):
     print(f"  {len(sink_times)} sinks still pending")
     print(f"  Sink C total: {total_sink_c} | accepted: {accepted_sink_c} | ignored: {ignored_sink_c}")
 
+    if l1_out:
+        print("\nL1 Latencies:")
+        print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'Data':>8} {'End':>8} {'Latency':>8} {'MissPenalty':>8}")
+        print("-" * 60)
+
+        for addr, core, start, data, end, lat in sorted(l1_results, key=lambda r: r[2]):
+            data_str = data if data is not None else "-"
+            miss_penalty = data - start
+            print(f"0x{addr:0>8} 0x{core:0>1} {start:8d} {data_str:8d} {end:8d} {lat:8d} {miss_penalty:8d}")
+    
+    # --- L1 CSV output ---
+    if l1_out:
+        os.makedirs(os.path.dirname(l1_out), exist_ok=True)
+
+        with open(l1_out, "w", newline="") as fout:
+            writer = csv.writer(fout)
+
+            writer.writerow(["Address","Core","StartCycle","DataCycle","EndCycle","Latency","MissPenalty"])
+
+            for addr, core, start, data, end, lat in l1_results:
+
+                miss_penalty = (data - start if data is not None else "")
+
+                writer.writerow([
+                    f"0x{addr:X}",f"0x{core:X}",start,
+                    data if data is not None else "",
+                    end,lat,miss_penalty
+                ])
+
+        print(f"\nL1 results written to {l1_out}")
+
+
+    print(f"\nL1 Summary:")
+    print(f"  {len(l1_results)} L1 requests completed")
+    print(f"  {len(l1_start)} L1 requests still pending")
+
+
     # Optional: print pending list if debug enabled
     if debug and sink_times:
-        print("\n⚠️  Pending sinks (unmatched requests):")
+        print("\n [WARN] Pending sinks (unmatched requests):")
         for (src, opcode), start_cycle in sorted(sink_times.items(), key=lambda kv: kv[1]):
             print(f"    - Source 0x{src:X}, opcode={opcode}, issued @ {start_cycle}")
 
@@ -188,6 +304,7 @@ def main():
     )
     parser.add_argument("logfile", help="Path to the log file (with Sink + completion lines)")
     parser.add_argument("--csv", help="Optional output CSV file path")
+    parser.add_argument("--l1csv", help="Optional output L1 CSV file path")
     parser.add_argument("--debug", action="store_true", help="Enable verbose debug printing")
     args = parser.parse_args()
 
@@ -195,7 +312,7 @@ def main():
         print(f"Error: file '{args.logfile}' not found.")
         return
 
-    parse_log(args.logfile, csv_out=args.csv, debug=args.debug)
+    parse_log(args.logfile, csv_out=args.csv, l1_out=args.l1csv, debug=args.debug)
 
 
 if __name__ == "__main__":
