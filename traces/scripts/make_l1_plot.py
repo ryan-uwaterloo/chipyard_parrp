@@ -12,13 +12,15 @@ plt.style.use(['science', 'ieee'])
 # ============================================================
 
 CSV_FILES = [
-    "../parsed/new_radix-4-l1-ctrl.csv",
-    "../parsed/new_fmm-4-l1-ctrl.csv",
-]
+    "../parsed/final/radix-4-l1-ctrl.csv",
+    "../parsed/final/fmm-4-l1-ctrl.csv",
+    "../parsed/final/fft-4-l1-ctrl.csv",
+]   
 
 LABELS = [
     "Radix-4",
     "FMM-4",
+    "FFT-4",
 ]
 
 OUTPUT_FILE = "miss_penalty_boxplot_ieee.pdf"
@@ -103,19 +105,45 @@ def main():
 
     fig, ax = plt.subplots()
 
-    # True min/max whiskers
-    box = ax.boxplot(
+    # Compute summary stats
+    means = [np.mean(d) for d in all_data]
+    max_vals = [np.max(d) for d in all_data]
+
+    # Violin plot
+    violins = ax.violinplot(
         all_data,
-        whis=[0, 100],        # Whiskers extend to real min/max
-        widths=0.6,
-        showfliers=False,     # No Tukey outliers
-        medianprops=dict(linewidth=1.2),
-        boxprops=dict(linewidth=0.8),
-        whiskerprops=dict(linewidth=0.8),
-        capprops=dict(linewidth=0.8)
+        showmeans=False,
+        showmedians=False,
+        showextrema=False,
+        widths=0.7,
+        points=500
     )
 
+    # Style violins
+    for body in violins['bodies']:
+        body.set_alpha(0.7)
+
+    # Plot mean bars
+    for i, mean in enumerate(means, start=1):
+        ax.hlines(
+            mean,
+            i - 0.25,
+            i + 0.25,
+            linewidth=1.4
+        )
+
+    # Plot absolute max markers
+    ax.scatter(
+        range(1, len(max_vals) + 1),
+        max_vals,
+        marker="_",
+        s=400,
+        linewidths=1.5
+    )
+
+    ax.set_xticks(range(1, len(LABELS) + 1))
     ax.set_xticklabels(LABELS)
+
     ax.set_ylabel("Miss Penalty (cycles)")
     ax.set_title("Miss Penalty Distribution")
 

@@ -275,7 +275,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 miss_penalty = (data - start if data is not None else "")
 
                 writer.writerow([
-                    f"0x{addr:X}",f"0x{core:X}",start,
+                    f"{addr:#X}",f"0x{core:X}",start,
                     data if data is not None else "",
                     end,lat,miss_penalty
                 ])
