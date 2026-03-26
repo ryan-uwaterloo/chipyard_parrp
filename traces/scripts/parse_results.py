@@ -29,6 +29,12 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_free_re = re.compile(
         r"@ clk_cycle\s+(\d+): L1 Request MSHR Free! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    l1_release_new_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New L1 Release! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
+    l1_release_complete_re = re.compile(
+        r"@ clk_cycle\s+(\d+): L1 Release Complete! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
 
 
     # --- State maps ---
@@ -39,6 +45,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_start = {}         # (addr, core) -> cycle
     l1_data = {}          # (addr, core) -> cycle
     l1_results = []       # results list
+    l1_release_start = {}   # (addr, core) -> cycle
+    l1_release_results = [] # (addr, core, start, end, latency)
 
 
     # --- Stall tracking ---
@@ -221,6 +229,35 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
                 continue
 
+            if m := l1_release_new_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                core = int(m[3], 16)
+                key = (addr, core)
+                if key not in l1_release_start:
+                    l1_release_start[key] = cycle
+                    if debug:
+                        print(f"[line {line_no}] L1 RELEASE NEW addr=0x{addr:X}, core=0x{core:X}, cycle={cycle}")
+                continue
+
+            if m := l1_release_complete_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                core = int(m[3], 16)
+                key = (addr, core)
+                if key in l1_release_start:
+                    start = l1_release_start[key]
+                    latency = cycle - start
+                    l1_release_results.append((addr, core, start, cycle, latency))
+                    if debug:
+                        print(f"[line {line_no}] L1 RELEASE COMPLETE addr=0x{addr:X}, "
+                            f"start={start}, end={cycle}, lat={latency}")
+                    del l1_release_start[key]
+                else:
+                    if debug:
+                        print(f"[line {line_no}] L1 Release completion unmatched addr=0x{addr:X}")
+                continue
+
 
     # --- Output summary ---
     header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'Metadata'}"
@@ -286,6 +323,25 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     print(f"\nL1 Summary:")
     print(f"  {len(l1_results)} L1 requests completed")
     print(f"  {len(l1_start)} L1 requests still pending")
+
+    if l1_out:  # or a new dedicated arg
+        print("\nL1 Release Latencies:")
+        print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'End':>8} {'Latency':>8}")
+        print("-" * 50)
+        for addr, core, start, end, lat in sorted(l1_release_results, key=lambda r: r[2]):
+            print(f"0x{addr:0>8} 0x{core:0>1} {start:8d} {end:8d} {lat:8d}")
+
+        release_csv = l1_out.replace(".csv", "_releases.csv")  # or a new arg
+        with open(release_csv, "w", newline="") as fout:
+            writer = csv.writer(fout)
+            writer.writerow(["Address", "Core", "StartCycle", "EndCycle", "Latency"])
+            for addr, core, start, end, lat in l1_release_results:
+                writer.writerow([f"{addr:#X}", f"0x{core:X}", start, end, lat])
+        print(f"\nL1 Release results written to {release_csv}")
+
+    print(f"\nL1 Release Summary:")
+    print(f"  {len(l1_release_results)} L1 releases completed")
+    print(f"  {len(l1_release_start)} L1 releases still pending")
 
 
     # Optional: print pending list if debug enabled
