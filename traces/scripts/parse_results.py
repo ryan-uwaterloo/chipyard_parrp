@@ -170,6 +170,13 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 # Compute latency
                 if sink_key in sink_times:
                     start_cycle = sink_times[sink_key]
+
+                    # Discard stale Source D from a prior request on the same source
+                    if source_d_cycle is not None and source_d_cycle < start_cycle:
+                        if debug:
+                            print(f"[line {line_no}] Discarding stale Source D cycle {source_d_cycle} "
+                                  f"for source=0x{src:X} (before start={start_cycle})")
+                        source_d_cycle = None
                     latency = cycle - start_cycle
 
                     # Match metadata (by source only)
