@@ -19,6 +19,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     complete_re = re.compile(
         r"@ clk_cycle\s+(\d+):\s*(\w+)\s+Request completed; sent to directory!\s*source:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    source_d_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New Source D Request! opcode:\s*(\w+), source:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
     # L1 Regexes
     l1_new_re = re.compile(
         r"@ clk_cycle\s+(\d+): New L1 Request! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
@@ -39,9 +42,10 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     # --- State maps ---
     sink_times = {}       # (source, opcode) -> start_cycle
-    request_meta = {}     # (source, opcode) -> metadata dict
+    request_meta = {}     # source -> metadata dict
     last_completion = {}  # (source, opcode) -> last completion cycle
-    results = []          # [(source, opcode, start, end, latency, metadata, stalls)]
+    last_source_d = {}    # source -> last Source D cycle seen
+    results = []          # [(source, opcode, start, end, latency, metadata, stalls, source_d_cycle)]
     l1_start = {}         # (addr, core) -> cycle
     l1_data = {}          # (addr, core) -> cycle
     l1_results = []       # results list
@@ -129,6 +133,15 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     print(f"[line {line_no}] ReleaseData stall at cycle={cycle} (count={release_stalls['pending']['count']})")
                 continue
 
+            # --- Match Source D (track last cycle per source) ---
+            if m := source_d_re.search(line):
+                cycle = int(m[1])
+                src = int(m[3], 16)
+                last_source_d[src] = cycle
+                if debug:
+                    print(f"[line {line_no}] Source D: cycle={cycle}, source=0x{src:X} (last updated)")
+                continue
+
             # --- Match completions ---
             if m := complete_re.search(line):
                 cycle = int(m[1])
@@ -151,6 +164,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 else:
                     stall_cycles = 0
 
+                # Grab last Source D cycle for this source (then clear it)
+                source_d_cycle = last_source_d.pop(src, None)
+
                 # Compute latency
                 if sink_key in sink_times:
                     start_cycle = sink_times[sink_key]
@@ -159,11 +175,13 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     # Match metadata (by source only)
                     meta = request_meta.get(src, {})
 
-                    results.append((src, opcode, start_cycle, cycle, latency, meta, stall_cycles))
+                    results.append((src, opcode, start_cycle, cycle, latency, meta, stall_cycles, source_d_cycle))
 
                     if debug:
+                        source_d_to_complete = (cycle - source_d_cycle) if source_d_cycle is not None else "-"
                         print(f"[line {line_no}] Completed: source=0x{src:X}, opcode={opcode}, start={start_cycle}, end={cycle}, "
-                              f"latency={latency}, stalls={stall_cycles}, metadata={meta}")
+                              f"latency={latency}, stalls={stall_cycles}, source_d={source_d_cycle}, "
+                              f"source_d_to_complete={source_d_to_complete}, metadata={meta}")
 
                     del sink_times[sink_key]
                 else:
@@ -260,23 +278,29 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
 
     # --- Output summary ---
-    header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'Metadata'}"
+    header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
     print(header)
     print("-" * len(header))
-    for src, opcode, start, end, lat, meta, stalls in sorted(results, key=lambda r: r[2]):
+    for src, opcode, start, end, lat, meta, stalls, source_d_cycle in sorted(results, key=lambda r: r[2]):
         src_str = f"0x{src:X}"
         meta_str = f"DRAM={meta.get('need_dram','-')}, Probe={meta.get('need_probe','-')}, Evict={meta.get('evicting','-')}, BackInv={meta.get('back_inv','-')}"
-        print(f"{src_str:<8}  {opcode:<12}  {start:8d}  {end:8d}  {lat:8d}  {stalls:6d}  {meta_str}")
+        source_d_str = str(source_d_cycle) if source_d_cycle is not None else "-"
+        d_to_done_str = str(end - source_d_cycle) if source_d_cycle is not None else "-"
+        print(f"{src_str:<8}  {opcode:<12}  {start:8d}  {end:8d}  {lat:8d}  {stalls:6d}  {source_d_str:>8}  {d_to_done_str:>6}  {meta_str}")
 
     # --- CSV output ---
     if csv_out:
         with open(csv_out, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Latency", "ReleaseStallCycles",
+                             "SourceDCycle", "SourceDToComplete",
                              "NeedDRAM", "NeedProbe", "Evicting", "BackInv"])
-            for src, opcode, start, end, lat, meta, stalls in results:
+            for src, opcode, start, end, lat, meta, stalls, source_d_cycle in results:
+                d_to_complete = (end - source_d_cycle) if source_d_cycle is not None else ""
                 writer.writerow([
                     f"0x{src:X}", opcode, start, end, lat, stalls,
+                    source_d_cycle if source_d_cycle is not None else "",
+                    d_to_complete,
                     meta.get('need_dram',''), meta.get('need_probe',''),
                     meta.get('evicting',''), meta.get('back_inv','')
                 ])
