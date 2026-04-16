@@ -38,20 +38,39 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_release_complete_re = re.compile(
         r"@ clk_cycle\s+(\d+): L1 Release Complete! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    source_b_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New Source B Request! opcode: ProbeBlock, param: \d+, addr:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
+    sink_c_probeack_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New Sink C Request! opcode: ProbeAck(?:Data)?, addr:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
 
 
     # --- State maps ---
     sink_times = {}       # (source, opcode) -> start_cycle
     request_meta = {}     # source -> metadata dict
     last_completion = {}  # (source, opcode) -> last completion cycle
-    last_source_d = {}    # source -> last Source D cycle seen
+    last_source_d = {}    # (source, source_d_opcode) -> last Source D cycle seen
     results = []          # [(source, opcode, start, end, latency, metadata, stalls, source_d_cycle)]
     l1_start = {}         # (addr, core) -> cycle
     l1_data = {}          # (addr, core) -> cycle
     l1_results = []       # results list
     l1_release_start = {}   # (addr, core) -> cycle
     l1_release_results = [] # (addr, core, start, end, latency)
+    probe_start = {}     # addr -> start_cycle
+    l1_probe_expected = {}  # addr -> expected ack count
+    l1_probe_received = {}  # addr -> received ack count
+    probe_results = []   # (addr, start, end, latency)
 
+    # Mapping from completion opcode to the expected Source D opcode
+    # Release/ReleaseData are acknowledged by ReleaseAck;
+    # Acquire-family opcodes are fulfilled by Grant or GrantData.
+    COMPLETION_TO_SOURCE_D_OPCODE = {
+        "Release":     "ReleaseAck",
+        "ReleaseData": "ReleaseAck",
+        "AcquireBlock": "GrantData",
+        "AcquirePerm":  "Grant",
+    }
 
     # --- Stall tracking ---
     release_stalls = defaultdict(lambda: {"last_cycle": None, "count": 0})
@@ -66,6 +85,26 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     with open(filepath, "r") as f:
         for line_no, line in enumerate(f, 1):
+            # ProbeAcks before sinks
+            if m := sink_c_probeack_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                if addr in probe_start:
+                    l1_probe_received[addr] += 1
+                    if debug:
+                        print(f"[line {line_no}] PROBE ACK addr=0x{addr:X}, "
+                            f"received={l1_probe_received[addr]}, expected={l1_probe_expected[addr]}")
+                    if l1_probe_received[addr] >= l1_probe_expected[addr]:
+                        start = probe_start[addr]
+                        latency = cycle - start
+                        probe_results.append((addr, start, cycle, latency))
+                        if debug:
+                            print(f"[line {line_no}] PROBE COMPLETE addr=0x{addr:X}, "
+                                f"start={start}, end={cycle}, lat={latency}")
+                        del probe_start[addr]
+                        del l1_probe_expected[addr]
+                        del l1_probe_received[addr]
+                continue
 
             # --- Match Sink arrivals ---
             if m := sink_re.search(line):
@@ -133,13 +172,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     print(f"[line {line_no}] ReleaseData stall at cycle={cycle} (count={release_stalls['pending']['count']})")
                 continue
 
-            # --- Match Source D (track last cycle per source) ---
+            # --- Match Source D (track last cycle per (source, source_d_opcode)) ---
             if m := source_d_re.search(line):
                 cycle = int(m[1])
+                sd_opcode = m[2]
                 src = int(m[3], 16)
-                last_source_d[src] = cycle
+                last_source_d[(src, sd_opcode)] = cycle
                 if debug:
-                    print(f"[line {line_no}] Source D: cycle={cycle}, source=0x{src:X} (last updated)")
+                    print(f"[line {line_no}] Source D: cycle={cycle}, opcode={sd_opcode}, source=0x{src:X} (last updated)")
                 continue
 
             # --- Match completions ---
@@ -164,8 +204,21 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 else:
                     stall_cycles = 0
 
-                # Grab last Source D cycle for this source (then clear it)
-                source_d_cycle = last_source_d.pop(src, None)
+                # Look up the Source D opcode that corresponds to this completion opcode,
+                # then pop only that specific (src, sd_opcode) entry so that concurrent
+                # requests sharing the same sourceID but different Source D opcodes
+                # (e.g. GrantData for AcquireBlock vs ReleaseAck for ReleaseData) do not
+                # cross-contaminate each other.
+                sd_opcode = COMPLETION_TO_SOURCE_D_OPCODE.get(opcode)
+                if sd_opcode is not None:
+                    source_d_cycle = last_source_d.pop((src, sd_opcode), None)
+                else:
+                    # Unknown opcode — fall back to searching all Source D entries for src
+                    source_d_cycle = None
+                    for key in list(last_source_d):
+                        if key[0] == src:
+                            source_d_cycle = last_source_d.pop(key)
+                            break
 
                 # Compute latency
                 if sink_key in sink_times:
@@ -283,6 +336,21 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         print(f"[line {line_no}] L1 Release completion unmatched addr=0x{addr:X}")
                 continue
 
+            # Probe timings
+            if m := source_b_re.search(line):
+                cycle = int(m[1])
+                addr = int(m[2], 16)
+                if addr not in probe_start:
+                    probe_start[addr] = cycle
+                    l1_probe_expected[addr] = 0
+                    l1_probe_received[addr] = 0
+                    if debug:
+                        print(f"[line {line_no}] PROBE START (SourceB) addr=0x{addr:X}, cycle={cycle}")
+                l1_probe_expected[addr] += 1
+                if debug:
+                    print(f"[line {line_no}] PROBE expected count now {l1_probe_expected[addr]} for addr=0x{addr:X}")
+                continue
+
 
     # --- Output summary ---
     header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
@@ -370,9 +438,27 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 writer.writerow([f"{addr:#X}", f"0x{core:X}", start, end, lat])
         print(f"\nL1 Release results written to {release_csv}")
 
-    print(f"\nL1 Release Summary:")
-    print(f"  {len(l1_release_results)} L1 releases completed")
-    print(f"  {len(l1_release_start)} L1 releases still pending")
+        print(f"\nL1 Release Summary:")
+        print(f"  {len(l1_release_results)} L1 releases completed")
+        print(f"  {len(l1_release_start)} L1 releases still pending")
+
+        print("\nProbe Latencies:")
+        print(f"{'Address':>12} {'Start':>8} {'End':>8} {'Latency':>8}")
+        print("-" * 42)
+        for addr, start, end, lat in sorted(probe_results, key=lambda r: r[1]):
+            print(f"0x{addr:0>8} {start:8d} {end:8d} {lat:8d}")
+
+        probe_csv = csv_out.replace(".csv", "-probes.csv")
+        with open(probe_csv, "w", newline="") as fout:
+            writer = csv.writer(fout)
+            writer.writerow(["Address", "StartCycle", "EndCycle", "Latency"])
+            for addr, start, end, lat in probe_results:
+                writer.writerow([f"{addr:#X}", start, end, lat])
+        print(f"\nProbe results written to {probe_csv}")
+
+        print(f"\nL1 Probe Summary:")
+        print(f"  {len(probe_results)} Probes completed")
+        print(f"  {len(probe_start)} Probes still pending")
 
 
     # Optional: print pending list if debug enabled
