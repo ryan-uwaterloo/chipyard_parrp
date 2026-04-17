@@ -51,3 +51,5 @@ traces/parsed/*.csv
 traces/scripts/pyvenv.cfg
 test_run_dir/
 tools/siliconcompiler/build/
+build/
+traces/scripts/venv/
