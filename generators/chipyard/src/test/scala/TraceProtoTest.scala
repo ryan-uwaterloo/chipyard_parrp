@@ -113,7 +113,8 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     dag: Seq[ElasticTraceDAG],
     idag: Seq[InstTraceDAG],
     numTiles: Int,
-    l2ways: Int
+    l2ways: Int,
+    traceVCD: Boolean
   ): Unit = {
     var clock = 0L
 
@@ -133,9 +134,12 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     val issued_a_req = mutable.Seq.fill(numTiles)(false)
     val inst_issued_a_req = mutable.Seq.fill(numTiles)(false)
 
-    test(testHarness.module).withAnnotations(
-      Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation, WriteVcdAnnotation)
-    ) { c =>
+    var annotations = Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation)
+    if (traceVCD) {
+      annotations = Seq(VerilatorBackendAnnotation, chiseltest.internal.NoThreadingAnnotation, WriteVcdAnnotation)
+    }
+
+    test(testHarness.module).withAnnotations(annotations) { c =>
 
       c.clock.setTimeout(0)
 
@@ -291,13 +295,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
   testName: String,
   numTiles: Int,
   fromCsv: Boolean,
-  l2ways: Int = 40
+  l2ways: Int = 40,
+  traceVCD: Boolean = false
 ): Unit = { 
   prepareTraces(testFolder, numTiles, fromCsv)
 
   val (dag, idag) = buildDAGs(testFolder, testName, numTiles)
 
-  runSimulation(dag, idag, numTiles, l2ways)
+  runSimulation(dag, idag, numTiles, l2ways, traceVCD)
 }
 
 it should "Run_HOL_synthetic" in {
@@ -305,16 +310,17 @@ it should "Run_HOL_synthetic" in {
     testFolder = "test_cases/hol_test",
     testName   = "hol_test",
     numTiles   = 4,
-    fromCsv    = true
+    fromCsv    = true,
+    traceVCD   = true
   )
 }
 
 it should "Run_radiosity-4" in {
   runTraceTest(
-    testFolder = "radix-8",
-    testName = "radix-4",
+    testFolder = "radiosity-8",
+    testName = "radiosity-4",
     numTiles = 4,
-    fromCsv = false
+    fromCsv = false,
   )
 }
 
