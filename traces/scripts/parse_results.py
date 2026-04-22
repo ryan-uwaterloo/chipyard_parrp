@@ -66,10 +66,10 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # Release/ReleaseData are acknowledged by ReleaseAck;
     # Acquire-family opcodes are fulfilled by Grant or GrantData.
     COMPLETION_TO_SOURCE_D_OPCODE = {
-        "Release":     "ReleaseAck",
-        "ReleaseData": "ReleaseAck",
-        "AcquireBlock": "GrantData",
-        "AcquirePerm":  "Grant",
+        "Release":     ["ReleaseAck"],
+        "ReleaseData": ["ReleaseAck"],
+        "AcquireBlock": ["GrantData", "Grant"],
+        "AcquirePerm":  ["Grant"],
     }
 
     # --- Stall tracking ---
@@ -197,59 +197,67 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     last_completion[sink_key] = cycle
                     continue
 
+                # Must have a matching sink
+                if sink_key not in sink_times:
+                    if debug:
+                        print(f"[line {line_no}] Completion unmatched: source=0x{src:X}, opcode={opcode}, cycle={cycle}")
+                    last_completion[sink_key] = cycle
+                    continue
+
+                start_cycle = sink_times[sink_key]
+
+                # Look up Source D without popping yet
+                sd_opcodes = COMPLETION_TO_SOURCE_D_OPCODE.get(opcode, [])
+                source_d_cycle = None
+                source_d_found_opcode = None
+                for sd_opcode in sd_opcodes:
+                    val = last_source_d.get((src, sd_opcode))
+                    if val is not None:
+                        source_d_cycle = val
+                        source_d_found_opcode = sd_opcode
+                        break
+                else:
+                    source_d_cycle = next(
+                        (last_source_d[k] for k in last_source_d if k[0] == src), None
+                    )
+
+                # Guard: reject if no valid Source D has been seen since the sink arrived
+                if opcode in {"AcquireBlock", "AcquirePerm"}:
+                    if source_d_cycle is None or source_d_cycle < start_cycle:
+                        if debug:
+                            print(f"[line {line_no}] Rejecting completion for {sink_key}: "
+                                f"no valid Source D (source_d={source_d_cycle}, start={start_cycle})")
+                        last_completion[sink_key] = cycle
+                        continue
+
+                # Now commit: pop Source D and sink entry
+                if source_d_found_opcode is not None:
+                    last_source_d.pop((src, source_d_found_opcode), None)
+                else:
+                    for key in list(last_source_d):
+                        if key[0] == src:
+                            last_source_d.pop(key)
+                            break
+
                 # Attach pending stall info for ReleaseData
+                stall_cycles = 0
                 if opcode == "ReleaseData":
                     stall_info = release_stalls.pop("pending", None)
                     stall_cycles = stall_info["count"] if stall_info else 0
-                else:
-                    stall_cycles = 0
 
-                # Look up the Source D opcode that corresponds to this completion opcode,
-                # then pop only that specific (src, sd_opcode) entry so that concurrent
-                # requests sharing the same sourceID but different Source D opcodes
-                # (e.g. GrantData for AcquireBlock vs ReleaseAck for ReleaseData) do not
-                # cross-contaminate each other.
-                sd_opcode = COMPLETION_TO_SOURCE_D_OPCODE.get(opcode)
-                if sd_opcode is not None:
-                    source_d_cycle = last_source_d.pop((src, sd_opcode), None)
-                else:
-                    # Unknown opcode — fall back to searching all Source D entries for src
-                    source_d_cycle = None
-                    for key in list(last_source_d):
-                        if key[0] == src:
-                            source_d_cycle = last_source_d.pop(key)
-                            break
+                latency = cycle - start_cycle
+                meta = request_meta.get(src, {})
 
-                # Compute latency
-                if sink_key in sink_times:
-                    start_cycle = sink_times[sink_key]
+                results.append((src, opcode, start_cycle, cycle, latency, meta, stall_cycles, source_d_cycle))
 
-                    # Discard stale Source D from a prior request on the same source
-                    if source_d_cycle is not None and source_d_cycle < start_cycle:
-                        if debug:
-                            print(f"[line {line_no}] Discarding stale Source D cycle {source_d_cycle} "
-                                  f"for source=0x{src:X} (before start={start_cycle})")
-                        source_d_cycle = None
-                    latency = cycle - start_cycle
+                if debug:
+                    source_d_to_complete = cycle - source_d_cycle
+                    print(f"[line {line_no}] Completed: source=0x{src:X}, opcode={opcode}, start={start_cycle}, end={cycle}, "
+                        f"latency={latency}, stalls={stall_cycles}, source_d={source_d_cycle}, "
+                        f"source_d_to_complete={source_d_to_complete}, metadata={meta}")
 
-                    # Match metadata (by source only)
-                    meta = request_meta.get(src, {})
-
-                    results.append((src, opcode, start_cycle, cycle, latency, meta, stall_cycles, source_d_cycle))
-
-                    if debug:
-                        source_d_to_complete = (cycle - source_d_cycle) if source_d_cycle is not None else "-"
-                        print(f"[line {line_no}] Completed: source=0x{src:X}, opcode={opcode}, start={start_cycle}, end={cycle}, "
-                              f"latency={latency}, stalls={stall_cycles}, source_d={source_d_cycle}, "
-                              f"source_d_to_complete={source_d_to_complete}, metadata={meta}")
-
-                    del sink_times[sink_key]
-                else:
-                    if debug:
-                        print(f"[line {line_no}] Completion unmatched: source=0x{src:X}, opcode={opcode}, cycle={cycle}")
-
+                del sink_times[sink_key]
                 last_completion[sink_key] = cycle
-                continue
 
             # --- L1 new requests ---
             if m := l1_new_re.search(line):
@@ -468,6 +476,37 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
             print(f"    - Source 0x{src:X}, opcode={opcode}, issued @ {start_cycle}")
 
 
+    # --- Min/Max latency summaries ---
+    print("\nMin/Max Latency Events:")
+
+    # LLC requests (results)
+    if results:
+        by_lat = sorted(results, key=lambda r: r[4])
+        for label, r in [("LLC min", by_lat[0]), ("LLC max", by_lat[-1])]:
+            src, opcode, start, end, lat, meta, stalls, source_d_cycle = r
+            print(f"  {label}: opcode={opcode}, source=0x{src:X}, start={start}, end={end}, latency={lat}")
+
+    # L1 requests
+    if l1_results:
+        by_lat = sorted(l1_results, key=lambda r: r[5])
+        for label, r in [("L1 min", by_lat[0]), ("L1 max", by_lat[-1])]:
+            addr, core, start, data, end, lat = r
+            print(f"  {label}: addr=0x{addr:X}, core=0x{core:X}, start={start}, end={end}, latency={lat}")
+
+    # L1 releases
+    if l1_release_results:
+        by_lat = sorted(l1_release_results, key=lambda r: r[4])
+        for label, r in [("L1 release min", by_lat[0]), ("L1 release max", by_lat[-1])]:
+            addr, core, start, end, lat = r
+            print(f"  {label}: addr=0x{addr:X}, core=0x{core:X}, start={start}, end={end}, latency={lat}")
+
+    # Probes
+    if probe_results:
+        by_lat = sorted(probe_results, key=lambda r: r[3])
+        for label, r in [("Probe min", by_lat[0]), ("Probe max", by_lat[-1])]:
+            addr, start, end, lat = r
+            print(f"  {label}: addr=0x{addr:X}, start={start}, end={end}, latency={lat}")
+            
     return results
 
 
