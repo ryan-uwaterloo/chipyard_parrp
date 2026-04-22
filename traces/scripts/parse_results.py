@@ -395,7 +395,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     print(f"  {len(sink_times)} sinks still pending")
     print(f"  Sink C total: {total_sink_c} | accepted: {accepted_sink_c} | ignored: {ignored_sink_c}")
 
-    if l1_out:
+    # if l1_out:
         # print("\nL1 Latencies:")
         # print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'Data':>8} {'End':>8} {'Latency':>8} {'MissPenalty':>8}")
         # print("-" * 60)
