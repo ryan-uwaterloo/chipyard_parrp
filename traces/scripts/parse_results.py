@@ -361,15 +361,15 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
 
     # --- Output summary ---
-    header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
-    print(header)
-    print("-" * len(header))
-    for src, opcode, start, end, lat, meta, stalls, source_d_cycle in sorted(results, key=lambda r: r[2]):
-        src_str = f"0x{src:X}"
-        meta_str = f"DRAM={meta.get('need_dram','-')}, Probe={meta.get('need_probe','-')}, Evict={meta.get('evicting','-')}, BackInv={meta.get('back_inv','-')}"
-        source_d_str = str(source_d_cycle) if source_d_cycle is not None else "-"
-        d_to_done_str = str(end - source_d_cycle) if source_d_cycle is not None else "-"
-        print(f"{src_str:<8}  {opcode:<12}  {start:8d}  {end:8d}  {lat:8d}  {stalls:6d}  {source_d_str:>8}  {d_to_done_str:>6}  {meta_str}")
+    # header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
+    # print(header)
+    # print("-" * len(header))
+    # for src, opcode, start, end, lat, meta, stalls, source_d_cycle in sorted(results, key=lambda r: r[2]):
+    #     src_str = f"0x{src:X}"
+    #     meta_str = f"DRAM={meta.get('need_dram','-')}, Probe={meta.get('need_probe','-')}, Evict={meta.get('evicting','-')}, BackInv={meta.get('back_inv','-')}"
+    #     source_d_str = str(source_d_cycle) if source_d_cycle is not None else "-"
+    #     d_to_done_str = str(end - source_d_cycle) if source_d_cycle is not None else "-"
+    #     print(f"{src_str:<8}  {opcode:<12}  {start:8d}  {end:8d}  {lat:8d}  {stalls:6d}  {source_d_str:>8}  {d_to_done_str:>6}  {meta_str}")
 
     # --- CSV output ---
     if csv_out:
@@ -396,14 +396,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     print(f"  Sink C total: {total_sink_c} | accepted: {accepted_sink_c} | ignored: {ignored_sink_c}")
 
     if l1_out:
-        print("\nL1 Latencies:")
-        print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'Data':>8} {'End':>8} {'Latency':>8} {'MissPenalty':>8}")
-        print("-" * 60)
+        # print("\nL1 Latencies:")
+        # print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'Data':>8} {'End':>8} {'Latency':>8} {'MissPenalty':>8}")
+        # print("-" * 60)
 
-        for addr, core, start, data, end, lat in sorted(l1_results, key=lambda r: r[2]):
-            data_str = data if data is not None else "-"
-            miss_penalty = data - start
-            print(f"0x{addr:0>8} 0x{core:0>1} {start:8d} {data_str:8d} {end:8d} {lat:8d} {miss_penalty:8d}")
+        # for addr, core, start, data, end, lat in sorted(l1_results, key=lambda r: r[2]):
+        #     data_str = data if data is not None else "-"
+        #     miss_penalty = data - start
+        #     print(f"0x{addr:0>8} 0x{core:0>1} {start:8d} {data_str:8d} {end:8d} {lat:8d} {miss_penalty:8d}")
     
     # --- L1 CSV output ---
     if l1_out:
@@ -432,11 +432,11 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     print(f"  {len(l1_start)} L1 requests still pending")
 
     if l1_out:  # or a new dedicated arg
-        print("\nL1 Release Latencies:")
-        print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'End':>8} {'Latency':>8}")
-        print("-" * 50)
-        for addr, core, start, end, lat in sorted(l1_release_results, key=lambda r: r[2]):
-            print(f"0x{addr:0>8} 0x{core:0>1} {start:8d} {end:8d} {lat:8d}")
+        # print("\nL1 Release Latencies:")
+        # print(f"{'Address':>12} {'Core':>6} {'Start':>8} {'End':>8} {'Latency':>8}")
+        # print("-" * 50)
+        # for addr, core, start, end, lat in sorted(l1_release_results, key=lambda r: r[2]):
+        #     print(f"0x{addr:0>8} 0x{core:0>1} {start:8d} {end:8d} {lat:8d}")
 
         release_csv = l1_out.replace(".csv", "_releases.csv")  # or a new arg
         with open(release_csv, "w", newline="") as fout:
@@ -450,11 +450,11 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         print(f"  {len(l1_release_results)} L1 releases completed")
         print(f"  {len(l1_release_start)} L1 releases still pending")
 
-        print("\nProbe Latencies:")
-        print(f"{'Address':>12} {'Start':>8} {'End':>8} {'Latency':>8}")
-        print("-" * 42)
-        for addr, start, end, lat in sorted(probe_results, key=lambda r: r[1]):
-            print(f"0x{addr:0>8} {start:8d} {end:8d} {lat:8d}")
+        # print("\nProbe Latencies:")
+        # print(f"{'Address':>12} {'Start':>8} {'End':>8} {'Latency':>8}")
+        # print("-" * 42)
+        # for addr, start, end, lat in sorted(probe_results, key=lambda r: r[1]):
+        #     print(f"0x{addr:0>8} {start:8d} {end:8d} {lat:8d}")
 
         probe_csv = csv_out.replace(".csv", "-probes.csv")
         with open(probe_csv, "w", newline="") as fout:
