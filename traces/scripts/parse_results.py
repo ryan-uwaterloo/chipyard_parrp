@@ -22,6 +22,12 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     source_d_re = re.compile(
         r"@ clk_cycle\s+(\d+): New Source D Request! opcode:\s*(\w+), source:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    source_a_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New Source A Request! opcode:\s*(\w+), addr:\s*(0x[0-9a-fA-F]+), source:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
+    sink_d_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New Sink D Request! opcode:\s*(\w+), source:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
     # L1 Regexes
     l1_new_re = re.compile(
         r"@ clk_cycle\s+(\d+): New L1 Request! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
@@ -44,6 +50,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     sink_c_probeack_re = re.compile(
         r"@ clk_cycle\s+(\d+): New Sink C Request! opcode: ProbeAck(?:Data)?, addr:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    l1_hit_re = re.compile(
+        r"@ clk_cycle\s+(\d+): L1 Hit in core (\d+)!",
+        re.IGNORECASE)
 
 
     # --- State maps ---
@@ -62,6 +71,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_probe_received = {}  # addr -> received ack count
     probe_results = []   # (addr, start, end, latency)
     pending_source_d = {}  # src -> (opcode, start_cycle, end_cycle, latency, meta, stall_cycles)
+    source_a_times = {}   # (src, opcode) -> start_cycle
+    dram_results = []     # [(src, opcode, start, end, latency)]
+    l1_hits = defaultdict(int)  # core -> hit count
 
     # Mapping from completion opcode to the expected Source D opcode
     # Release/ReleaseData are acknowledged by ReleaseAck;
@@ -399,6 +411,41 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     print(f"[line {line_no}] PROBE expected count now {l1_probe_expected[addr]} for addr=0x{addr:X}")
                 continue
 
+            # Memory timing
+            if m := source_a_re.search(line):
+                cycle = int(m[1])
+                opcode = m[2]
+                src = int(m[4], 16)
+                if opcode == "AcquireBlock":
+                    key = (src, opcode)
+                    if key not in source_a_times:
+                        source_a_times[key] = cycle
+                        if debug:
+                            print(f"[line {line_no}] Source A: cycle={cycle}, opcode={opcode}, source=0x{src:X}")
+                continue
+
+            if m := sink_d_re.search(line):
+                cycle = int(m[1])
+                opcode = m[2]
+                src = int(m[3], 16)
+                if opcode == "GrantData":
+                    key = (src, "AcquireBlock")
+                    if key in source_a_times:
+                        start = source_a_times.pop(key)
+                        latency = cycle - start
+                        dram_results.append((src, start, cycle, latency))
+                        if debug:
+                            print(f"[line {line_no}] DRAM complete: source=0x{src:X}, "
+                                  f"start={start}, end={cycle}, latency={latency}")
+                continue
+
+            if m := l1_hit_re.search(line):
+                core = int(m[2])
+                l1_hits[core] += 1
+                if debug:
+                    print(f"[line {line_no}] L1 Hit core={core}")
+                continue
+
 
     # --- Output summary ---
     # header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
@@ -413,11 +460,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     # --- CSV output ---
     if csv_out:
+        dram_by_src = {src: lat for src, start, end, lat in dram_results}
+
         with open(csv_out, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Latency", "ReleaseStallCycles",
                              "SourceDCycle", "SourceDToComplete",
-                             "NeedDRAM", "NeedProbe", "Evicting", "BackInv"])
+                             "NeedDRAM", "NeedProbe", "Evicting", "BackInv",
+                             "DRAMLatency"])
             for src, opcode, start, end, lat, meta, stalls, source_d_cycle in results:
                 d_to_complete = (end - source_d_cycle) if source_d_cycle is not None else ""
                 writer.writerow([
@@ -425,7 +475,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     source_d_cycle if source_d_cycle is not None else "",
                     d_to_complete,
                     meta.get('need_dram',''), meta.get('need_probe',''),
-                    meta.get('evicting',''), meta.get('back_inv','')
+                    meta.get('evicting',''), meta.get('back_inv',''),
+                    dram_by_src.get(src, 0),
                 ])
         print(f"\n Results with metadata written to {csv_out}")
 
@@ -559,6 +610,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         print(f"\nMax Source D Residual (Release/ReleaseData):")
         print(f"  residual={residual}, opcode={opcode}, source=0x{src:X}, "
               f"end={end}, source_d={source_d_cycle}")
+
+    print(f"\nL1 Hit/Miss Summary:")
+    for core in sorted(set(list(l1_hits.keys()) + [k[1] for k in l1_start])):
+        hits = l1_hits[core]
+        misses = sum(1 for (addr, c) in l1_results if c == core)
+        total = hits + misses
+        hit_rate = (hits / total * 100) if total > 0 else 0.0
+        print(f"  Core {core}: hits={hits}, misses={misses}, total={total}, hit_rate={hit_rate:.1f}%")
             
     return results
 
