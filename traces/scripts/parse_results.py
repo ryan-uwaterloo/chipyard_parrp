@@ -51,7 +51,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         r"@ clk_cycle\s+(\d+): New Sink C Request! opcode: ProbeAck(?:Data)?, addr:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
     l1_hit_re = re.compile(
-        r"@ clk_cycle\s+(\d+): L1 Hit in core (\d+)!",
+        r"L1 Hit in core (\d+)!",
         re.IGNORECASE)
 
 
@@ -440,7 +440,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 continue
 
             if m := l1_hit_re.search(line):
-                core = int(m[2])
+                core = int(m[1])
                 l1_hits[core] += 1
                 if debug:
                     print(f"[line {line_no}] L1 Hit core={core}")
@@ -612,9 +612,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
               f"end={end}, source_d={source_d_cycle}")
 
     print(f"\nL1 Hit/Miss Summary:")
-    for core in sorted(set(list(l1_hits.keys()) + [k[1] for k in l1_start])):
+    for core in sorted(set(list(l1_hits.keys()) + [r[1] for r in l1_results])):
         hits = l1_hits[core]
-        misses = sum(1 for (addr, c) in l1_results if c == core)
+        misses = sum(1 for r in l1_results if r[1] == core)
         total = hits + misses
         hit_rate = (hits / total * 100) if total > 0 else 0.0
         print(f"  Core {core}: hits={hits}, misses={misses}, total={total}, hit_rate={hit_rate:.1f}%")
