@@ -50,9 +50,6 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     sink_c_probeack_re = re.compile(
         r"@ clk_cycle\s+(\d+): New Sink C Request! opcode: ProbeAck(?:Data)?, addr:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
-    l1_hit_re = re.compile(
-        r"L1 Hit in core (\d+)!",
-        re.IGNORECASE)
 
 
     # --- State maps ---
@@ -439,13 +436,6 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                                   f"start={start}, end={cycle}, latency={latency}")
                 continue
 
-            if m := l1_hit_re.search(line):
-                core = int(m[1])
-                l1_hits[core] += 1
-                if debug:
-                    print(f"[line {line_no}] L1 Hit core={core}")
-                continue
-
 
     # --- Output summary ---
     # header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
@@ -610,14 +600,6 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         print(f"\nMax Source D Residual (Release/ReleaseData):")
         print(f"  residual={residual}, opcode={opcode}, source=0x{src:X}, "
               f"end={end}, source_d={source_d_cycle}")
-
-    print(f"\nL1 Hit/Miss Summary:")
-    for core in sorted(set(list(l1_hits.keys()) + [r[1] for r in l1_results])):
-        hits = l1_hits[core]
-        misses = sum(1 for r in l1_results if r[1] == core)
-        total = hits + misses
-        hit_rate = (hits / total * 100) if total > 0 else 0.0
-        print(f"  Core {core}: hits={hits}, misses={misses}, total={total}, hit_rate={hit_rate:.1f}%")
             
     return results
 

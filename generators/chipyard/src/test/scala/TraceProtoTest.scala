@@ -324,6 +324,146 @@ it should "Run_radiosity-4" in {
   )
 }
 
+it should "Run_radix-4" in {
+  runTraceTest(
+    testFolder = "radix-8",
+    testName = "radix-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_barnes-4" in {
+  runTraceTest(
+    testFolder = "barnes-8",
+    testName = "barnes-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_ocean-4" in {
+  runTraceTest(
+    testFolder = "ocean-8",
+    testName = "ocean-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_fft-4" in {
+  runTraceTest(
+    testFolder = "fft-8",
+    testName = "fft-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_fmm-4" in {
+  runTraceTest(
+    testFolder = "fmm-8",
+    testName = "fmm-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_lu-4" in {
+  runTraceTest(
+    testFolder = "lu-8",
+    testName = "lu-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_cholesky-4" in {
+  runTraceTest(
+    testFolder = "cholesky-8",
+    testName = "cholesky-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_raytrace-4" in {
+  runTraceTest(
+    testFolder = "raytrace-8",
+    testName = "raytrace-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_water-nsquared-4" in {
+  runTraceTest(
+    testFolder = "water-nsquared-8",
+    testName = "water-nsquared-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Run_water-spatial-4" in {
+  runTraceTest(
+    testFolder = "water-spatial-8",
+    testName = "water-spatial-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
+it should "Synthetic-nmshrs-4" in {
+  runTraceTest(
+    testFolder = "test_cases/nmshrs_test",
+    testName = "nMSHRs-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false
+  )
+}
+
+it should "Synthetic-hol-4" in {
+  runTraceTest(
+    testFolder = "test_cases/hol_test",
+    testName = "HoL-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false
+  )
+}
+
+it should "Synthetic-probe-4" in {
+  runTraceTest(
+    testFolder = "test_cases/probe_test",
+    testName = "Probe-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false
+  )
+}
+
+it should "Synthetic-relbuf-4" in {
+  runTraceTest(
+    testFolder = "test_cases/releasebuf_test",
+    testName = "RelBuf-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false
+  )
+}
+
   // it should "Run_a_DAG_from_csv_synthetics" in {
   //   var clock = 0x0L
   //   val numTiles = 4
