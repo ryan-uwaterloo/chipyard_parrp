@@ -427,7 +427,7 @@ it should "Run_water-spatial-4" in {
 it should "Synthetic-nmshrs-4" in {
   runTraceTest(
     testFolder = "test_cases/nmshrs_test",
-    testName = "nMSHRs-4",
+    testName = "nmshrs-4",
     numTiles = 4,
     fromCsv = true,
     traceVCD = false
@@ -437,7 +437,7 @@ it should "Synthetic-nmshrs-4" in {
 it should "Synthetic-hol-4" in {
   runTraceTest(
     testFolder = "test_cases/hol_test",
-    testName = "HoL-4",
+    testName = "hol-4",
     numTiles = 4,
     fromCsv = true,
     traceVCD = false
@@ -447,7 +447,7 @@ it should "Synthetic-hol-4" in {
 it should "Synthetic-probe-4" in {
   runTraceTest(
     testFolder = "test_cases/probe_test",
-    testName = "Probe-4",
+    testName = "probe-4",
     numTiles = 4,
     fromCsv = true,
     traceVCD = false
@@ -457,7 +457,7 @@ it should "Synthetic-probe-4" in {
 it should "Synthetic-relbuf-4" in {
   runTraceTest(
     testFolder = "test_cases/releasebuf_test",
-    testName = "RelBuf-4",
+    testName = "relbuf-4",
     numTiles = 4,
     fromCsv = true,
     traceVCD = false
