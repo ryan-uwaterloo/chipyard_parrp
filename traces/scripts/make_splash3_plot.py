@@ -14,7 +14,8 @@ plt.style.use(['science', 'ieee'])
 # Configuration (Hard-coded for paper reproducibility)
 # ============================================================
 
-DATA_DIR = "../parsed/synthetics"
+DATA_DIR = "../parsed"
+DATA_START = 50_000
 
 # List of test names — filenames are derived automatically:
 #   L1:          {DATA_DIR}/{test}-l1-{ctrl,parrp}.csv
@@ -22,27 +23,27 @@ DATA_DIR = "../parsed/synthetics"
 #   LLC:         {DATA_DIR}/{test}-{ctrl,parrp}.csv
 TESTS = [
     # "radiosity-4",
-    # "radix-4",
+    "radix-4",
     # "barnes-4",
     # "water-nsquared-4",
     # "other-test",
-    "probe-4",
-    "relbuf-4",
-    "nmshrs-4",
-    "hol-4",
+    # "probe-4",
+    # "relbuf-4",
+    # "nmshrs-4",
+    # "hol-4",
 ]
 
 # Labels shown on the x-axis, one per test
 TEST_LABELS = [
     # "Radiosity",
-    # "Radix",
+    "Radix",
     # "Barnes",
     # "Water n^2",
     # "Other Test",
-    "Probe",
-    "RelBuf",
-    "nMSHRs",
-    "HoL",
+    # "Probe",
+    # "RelBuf",
+    # "nMSHRs",
+    # "HoL",
 ]
 
 # Toggle which subplots to generate
@@ -50,7 +51,7 @@ PLOT_MISS_PENALTY   = True
 PLOT_EVICTION_TIME  = True
 PLOT_RESIDUAL       = True
 
-OUTPUT_FILE = "combined_violin_ieee_synth.svg"
+OUTPUT_FILE = "combined_violin_ieee_radix.svg"
 
 CHUNK_SIZE = 5_000_000
 
@@ -110,7 +111,7 @@ def load_miss_penalty(filepath):
     for chunk in pd.read_csv(filepath, usecols=["MissPenalty", "StartCycle"], chunksize=CHUNK_SIZE):
         values = chunk["MissPenalty"].to_numpy(dtype=np.uint16)
         start_cycles = chunk["StartCycle"].to_numpy(dtype=np.uint64)
-        mask = (start_cycles >= 10_000) & (values >= 10)
+        mask = (start_cycles >= DATA_START) & (values >= 10)
         values = values[mask]
         if len(values) == 0:
             continue
@@ -141,13 +142,15 @@ def load_eviction_time(release_filepath, l1_filepath, num_sets=64, chunk_size=CH
     l1 = l1.sort_values(["Core", "IndexBits", "l1_start"]).reset_index(drop=True)
 
     results = []
+    global_min = float("inf")
+    global_max = float("-inf")
 
     for chunk in pd.read_csv(
         release_filepath,
         usecols=["Address", "Core", "StartCycle"],
         chunksize=chunk_size,
     ):
-        chunk = chunk[chunk["StartCycle"] >= 10_000].copy()
+        chunk = chunk[chunk["StartCycle"] >= DATA_START].copy()
         chunk["Core"] = chunk["Core"].str.lower()
         chunk["IndexBits"] = index_bits(chunk["Address"])
 
@@ -172,25 +175,38 @@ def load_eviction_time(release_filepath, l1_filepath, num_sets=64, chunk_size=CH
                     continue
                 if starts[p] <= cycle <= ends[p]:
                     eviction_times.append(targets[p] - cycle)
+                    print(f"{cycle}, {targets[p] - cycle}")
 
         if eviction_times:
             results.append(np.array(eviction_times, dtype=np.int32))
 
-    return np.concatenate(results) if results else np.array([], dtype=np.int32)
+        global_min = min(global_min, min(eviction_times))
+        global_max = max(global_max, max(eviction_times))
+
+    full_array = np.concatenate(results) if results else np.array([], dtype=np.int32)
+    return full_array, global_min, global_max
 
 def load_eviction_time_ctrl(release_filepath, chunk_size=CHUNK_SIZE):
     chunks = []
+    global_min = float("inf")
+    global_max = float("-inf")
     for chunk in pd.read_csv(release_filepath, usecols=["Latency", "StartCycle"], chunksize=chunk_size):
-        mask = chunk["StartCycle"] >= 10_000
-        chunks.append(chunk.loc[mask, "Latency"].to_numpy(dtype=np.int32))
-    return np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
+        mask = chunk["StartCycle"] >= DATA_START
+        values = chunk.loc[mask, "Latency"].to_numpy(dtype=np.int32)
+        chunks.append(values)
+
+        global_min = min(global_min, values.min())
+        global_max = max(global_max, values.max())
+        
+    full_array = np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
+    return full_array, global_min, global_max
 
 
 def load_source_d_to_complete(llc_filepath, chunk_size=CHUNK_SIZE):
     RELEASE_OPCODES = {"Release", "ReleaseData"}
     chunks = []
     for chunk in pd.read_csv(llc_filepath, usecols=["Opcode", "SourceDToComplete", "StartCycle"], chunksize=chunk_size):
-        mask = chunk["Opcode"].str.strip().isin(RELEASE_OPCODES) & (chunk["StartCycle"] >= 10_000)
+        mask = chunk["Opcode"].str.strip().isin(RELEASE_OPCODES) & (chunk["StartCycle"] >= DATA_START)
         values = pd.to_numeric(chunk.loc[mask, "SourceDToComplete"], errors="coerce").dropna()
         chunks.append(values.to_numpy(dtype=np.int32))
     return np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
@@ -301,16 +317,20 @@ def main():
 
         if PLOT_MISS_PENALTY:
             print("  Loading miss penalty (ctrl)...")
-            entry["miss_penalty_ctrl"],  _, _ = load_miss_penalty(p["l1_ctrl"])
+            entry["miss_penalty_ctrl"],  entry["min_miss_ctrl"], entry["max_miss_ctrl"] = load_miss_penalty(p["l1_ctrl"])
+            print(f"{entry["min_miss_ctrl"]}, {entry["max_miss_ctrl"]}")
             print("  Loading miss penalty (parrp)...")
-            entry["miss_penalty_parrp"], _, _ = load_miss_penalty(p["l1_parrp"])
+            entry["miss_penalty_parrp"], entry["min_miss_parrp"], entry["max_miss_parrp"] = load_miss_penalty(p["l1_parrp"])
+            print(f"{entry["min_miss_parrp"]}, {entry["max_miss_parrp"]}")
 
         if PLOT_EVICTION_TIME:
             num_sets = 128 if "moresets" in test else 64
             print("  Loading eviction time (ctrl)...")
-            entry["eviction_time_ctrl"]  = load_eviction_time_ctrl(p["rel_ctrl"])
+            entry["eviction_time_ctrl"], entry["min_evict_ctrl"], entry["max_evict_ctrl"]  = load_eviction_time_ctrl(p["rel_ctrl"])
+            print(f"{entry["min_evict_ctrl"]}, {entry["max_evict_ctrl"]}")
             print("  Loading eviction time (parrp)...")
-            entry["eviction_time_parrp"] = load_eviction_time(p["rel_parrp"], p["l1_parrp"], num_sets)
+            entry["eviction_time_parrp"], entry["min_evict_parrp"], entry["max_evict_parrp"] = load_eviction_time(p["rel_parrp"], p["l1_parrp"], num_sets)
+            print(f"{entry["min_evict_parrp"]}, {entry["max_evict_parrp"]}")
 
         if PLOT_RESIDUAL:
             print("  Loading LLC residual (ctrl)...")
