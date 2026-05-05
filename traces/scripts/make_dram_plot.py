@@ -78,6 +78,8 @@ def paths(test):
         "rel_parrp":     f"{DATA_DIR}/{test}-l1-parrp_releases.csv",
         "llc_ctrl":      f"{DATA_DIR}/{test}-ctrl.csv",
         "llc_parrp":     f"{DATA_DIR}/{test}-parrp.csv",
+        "dram_ctrl":     f"{DATA_DIR}/{test}-ctrl-dram.csv",
+        "dram_parrp":     f"{DATA_DIR}/{test}-parrp-dram.csv",
     }
 
 
@@ -90,8 +92,8 @@ def load_dram(filepath):
     global_min = float("inf")
     global_max = float("-inf")
 
-    for chunk in pd.read_csv(filepath, usecols=["DRAMLatency", "StartCycle"], chunksize=CHUNK_SIZE):
-        values = chunk["DRAMLatency"].to_numpy(dtype=np.uint16)
+    for chunk in pd.read_csv(filepath, usecols=["Latency", "StartCycle"], chunksize=CHUNK_SIZE):
+        values = chunk["Latency"].to_numpy(dtype=np.uint16)
         start_cycles = chunk["StartCycle"].to_numpy(dtype=np.uint64)
         mask = (start_cycles >= 10_000) & (values >= 10)
         values = values[mask]
@@ -207,9 +209,9 @@ def main():
         entry = {}
 
         print("  Loading LLC residual (ctrl)...")
-        entry["residual_ctrl"], _, _  = load_dram(p["llc_ctrl"])
+        entry["residual_ctrl"], _, _  = load_dram(p["dram_ctrl"])
         print("  Loading LLC residual (parrp)...")
-        entry["residual_parrp"], _, _ = load_dram(p["llc_parrp"])
+        entry["residual_parrp"], _, _ = load_dram(p["dram_parrp"])
 
         test_data[test] = entry
 

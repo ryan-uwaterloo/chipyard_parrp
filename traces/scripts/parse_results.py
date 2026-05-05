@@ -436,7 +436,6 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                                   f"start={start}, end={cycle}, latency={latency}")
                 continue
 
-
     # --- Output summary ---
     # header = f"\n{'Source':>8}  {'Opcode':>12}  {'Start':>8}  {'End':>8}  {'Latency':>8}  {'Stalls':>6}  {'SourceD':>8}  {'D→Done':>6}  {'Metadata'}"
     # print(header)
@@ -450,14 +449,11 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     # --- CSV output ---
     if csv_out:
-        dram_by_src = {src: lat for src, start, end, lat in dram_results}
-
         with open(csv_out, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Latency", "ReleaseStallCycles",
                              "SourceDCycle", "SourceDToComplete",
-                             "NeedDRAM", "NeedProbe", "Evicting", "BackInv",
-                             "DRAMLatency"])
+                             "NeedDRAM", "NeedProbe", "Evicting", "BackInv"])
             for src, opcode, start, end, lat, meta, stalls, source_d_cycle in results:
                 d_to_complete = (end - source_d_cycle) if source_d_cycle is not None else ""
                 writer.writerow([
@@ -466,9 +462,18 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     d_to_complete,
                     meta.get('need_dram',''), meta.get('need_probe',''),
                     meta.get('evicting',''), meta.get('back_inv',''),
-                    dram_by_src.get(src, 0),
-                ])
+                    ])
         print(f"\n Results with metadata written to {csv_out}")
+
+        dram_csv = csv_out.replace(".csv", "-dram.csv")
+        with open(dram_csv, "w", newline="") as fout:
+            writer = csv.writer(fout)
+            writer.writerow(["SourceID", "StartCycle", "EndCycle", "Latency"])
+
+            for src, start, end, lat in dram_results:
+                writer.writerow([f"0x{src:X}", start, end, lat])
+        print(f"\n DRAM results written to {dram_csv}")
+
 
     # --- Summary stats ---
     print(f"\nSummary:")
