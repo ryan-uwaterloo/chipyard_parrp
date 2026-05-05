@@ -48,6 +48,12 @@ traces/cholesky-8/
 traces/lu-8/
 traces/*/*.proto.gz
 traces/parsed/*.csv
+traces/mrt_data/*.csv
+traces/parsed/synthetics/*.csv
+traces/parsed/synth/*.csv
+traces/test_cases/*
+traces/parsed/*.csv
+traces/parsed/final/*.csv
 traces/scripts/pyvenv.cfg
 test_run_dir/
 tools/siliconcompiler/build/
