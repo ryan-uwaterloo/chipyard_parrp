@@ -430,7 +430,7 @@ it should "Synthetic-nmshrs-4" in {
     testName = "nmshrs-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = false
+    traceVCD = true
   )
 }
 
@@ -440,7 +440,7 @@ it should "Synthetic-hol-4" in {
     testName = "hol-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = false
+    traceVCD = true
   )
 }
 
@@ -450,7 +450,7 @@ it should "Synthetic-probe-4" in {
     testName = "probe-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = false
+    traceVCD = true
   )
 }
 
@@ -460,7 +460,7 @@ it should "Synthetic-relbuf-4" in {
     testName = "relbuf-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = false
+    traceVCD = true
   )
 }
 
