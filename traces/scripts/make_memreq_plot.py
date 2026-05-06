@@ -14,18 +14,19 @@ plt.style.use(['science', 'ieee'])
 # Configuration
 # ============================================================
 
-DATA_DIR    = "../parsed"
+DATA_DIR = "../parsed/synthetics"
+# DATA_DIR    = "../parsed"
 MEMREQ_DIR  = "../mrt_data"
 
 TESTS = [
     # ("radiosity-4", "Radiosity"),
-    ("radix-4", "Radix"),
+    # ("radix-4", "Radix"),
     # ("barnes-4", "Barnes"),
     # ("water-nsquared-4", "Water-N^2"),
-    # ("probe-4", "Probe"),
-    # ("relbuf-4", "RelBuf"),
-    # ("nmshrs-4", "nMSHRs"),
-    # ("hol-4", "HoL"),
+    ("probe-4", "Probe"),
+    ("relbuf-4", "RelBuf"),
+    ("nmshrs-4", "nMSHRs"),
+    ("hol-4", "HoL"),
 ]
 
 STOCK_SUFFIX    = "-ctrl"
@@ -37,8 +38,8 @@ CACHE_TYPES = ["data", "inst"]
 PLOT_LOADS  = True
 PLOT_STORES = True
 
-OUTPUT_FILE      = "radix_reqtime_violin.svg"
-HIT_MISS_CSV_OUT = "hit_miss_summary_radix.csv"
+OUTPUT_FILE      = "reqtime_violin_synth.svg"
+HIT_MISS_CSV_OUT = "hit_miss_summary_synth.csv"
 
 CHUNK_SIZE  = 5_000_000
 MIN_SAMPLES = 30

@@ -14,34 +14,35 @@ plt.style.use(['science', 'ieee'])
 # Configuration (Hard-coded for paper reproducibility)
 # ============================================================
 
-DATA_DIR = "../parsed"
+DATA_DIR = "../parsed/synthetics"
+# DATA_DIR = "../parsed"
 
 # List of test names — filenames are derived automatically:
 #   L1:          {DATA_DIR}/{test}-l1-{ctrl,parrp}.csv
 #   L1-release:  {DATA_DIR}/{test}-l1-{ctrl,parrp}_releases.csv
 #   LLC:         {DATA_DIR}/{test}-{ctrl,parrp}.csv
 TESTS = [
-    "radix-4",
+    # "radix-4",
     # "other-test",
-    # "probe-4",
-    # "relbuf-4",
-    # "nmshrs-4",
-    # "hol-4",
+    "probe-4",
+    "relbuf-4",
+    "nmshrs-4",
+    "hol-4",
 ]
 
 # Labels shown on the x-axis, one per test
 TEST_LABELS = [
-    "Radix",
+    # "Radix",
     # "Other Test",
-    # "Probe",
-    # "RelBuf",
-    # "nMSHRs",
-    # "HoL",
+    "Probe",
+    "RelBuf",
+    "nMSHRs",
+    "HoL",
 ]
 
 # Toggle which subplots to generate
 
-OUTPUT_FILE = "dram_ieee_radix.svg"
+OUTPUT_FILE = "dram_ieee_synth.svg"
 
 CHUNK_SIZE = 5_000_000
 

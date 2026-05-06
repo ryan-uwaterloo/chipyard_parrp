@@ -14,7 +14,8 @@ plt.style.use(['science', 'ieee'])
 # Configuration (Hard-coded for paper reproducibility)
 # ============================================================
 
-DATA_DIR = "../parsed"
+DATA_DIR = "../parsed/synthetics"
+# DATA_DIR = "../parsed"
 DATA_START = 50_000
 
 # List of test names — filenames are derived automatically:
@@ -23,27 +24,27 @@ DATA_START = 50_000
 #   LLC:         {DATA_DIR}/{test}-{ctrl,parrp}.csv
 TESTS = [
     # "radiosity-4",
-    "radix-4",
+    # "radix-4",
     # "barnes-4",
     # "water-nsquared-4",
     # "other-test",
-    # "probe-4",
-    # "relbuf-4",
-    # "nmshrs-4",
-    # "hol-4",
+    "probe-4",
+    "relbuf-4",
+    "nmshrs-4",
+    "hol-4",
 ]
 
 # Labels shown on the x-axis, one per test
 TEST_LABELS = [
     # "Radiosity",
-    "Radix",
+    # "Radix",
     # "Barnes",
     # "Water n^2",
     # "Other Test",
-    # "Probe",
-    # "RelBuf",
-    # "nMSHRs",
-    # "HoL",
+    "Probe",
+    "RelBuf",
+    "nMSHRs",
+    "HoL",
 ]
 
 # Toggle which subplots to generate
@@ -51,7 +52,7 @@ PLOT_MISS_PENALTY   = True
 PLOT_EVICTION_TIME  = True
 PLOT_RESIDUAL       = True
 
-OUTPUT_FILE = "combined_violin_ieee_radix.svg"
+OUTPUT_FILE = "combined_violin_ieee_synth.svg"
 
 CHUNK_SIZE = 5_000_000
 
@@ -175,13 +176,12 @@ def load_eviction_time(release_filepath, l1_filepath, num_sets=64, chunk_size=CH
                     continue
                 if starts[p] <= cycle <= ends[p]:
                     eviction_times.append(targets[p] - cycle)
-                    print(f"{cycle}, {targets[p] - cycle}")
+                    # print(f"{cycle}, {targets[p] - cycle}")
 
         if eviction_times:
             results.append(np.array(eviction_times, dtype=np.int32))
-
-        global_min = min(global_min, min(eviction_times))
-        global_max = max(global_max, max(eviction_times))
+            global_min = min(global_min, min(eviction_times))
+            global_max = max(global_max, max(eviction_times))
 
     full_array = np.concatenate(results) if results else np.array([], dtype=np.int32)
     return full_array, global_min, global_max
@@ -195,8 +195,9 @@ def load_eviction_time_ctrl(release_filepath, chunk_size=CHUNK_SIZE):
         values = chunk.loc[mask, "Latency"].to_numpy(dtype=np.int32)
         chunks.append(values)
 
-        global_min = min(global_min, values.min())
-        global_max = max(global_max, values.max())
+        if values.any():
+            global_min = min(global_min, values.min())
+            global_max = max(global_max, values.max())
         
     full_array = np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
     return full_array, global_min, global_max
