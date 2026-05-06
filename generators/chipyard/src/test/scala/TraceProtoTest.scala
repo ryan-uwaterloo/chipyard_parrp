@@ -114,7 +114,8 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     idag: Seq[InstTraceDAG],
     numTiles: Int,
     l2ways: Int,
-    traceVCD: Boolean
+    traceVCD: Boolean,
+    fromCsv: Boolean
   ): Unit = {
     var clock = 0L
 
@@ -212,7 +213,13 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
               Context().env.checkpoint()
 
               dag(i).acknowledgeLoad(load.seqNum)
-              dag(i).log(s"DCache ${i}", load.seqNum)
+              if (fromCsv) {
+                if (clock > 50000) {
+                  dag(i).log(s"DCache ${i}", load.seqNum)
+                }
+              } else {
+                dag(i).log(s"DCache ${i}", load.seqNum)
+              }
             }catch{
               case e: FailedExpectException =>
               dag(i).incrementLoadTime(load.seqNum)
@@ -227,7 +234,13 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
               Context().env.checkpoint()
 
               dag(i).acknowledgeStore(store.seqNum)
-              dag(i).log(s"DCache ${i}", store.seqNum)
+              if (fromCsv) {
+                if (clock > 50000) {
+                  dag(i).log(s"DCache ${i}", store.seqNum)
+                }
+              } else {
+                dag(i).log(s"DCache ${i}", store.seqNum)
+              }
             }catch{
               case e: FailedExpectException =>
               dag(i).incrementStoreTime(store.seqNum)
@@ -271,7 +284,13 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
               Context().env.checkpoint()
 
               idag(i).acknowledgeLoad(load.tick)
-              idag(i).log(s"ICache ${i}", load.tick)
+              if (fromCsv) {
+                if (clock > 50000) {
+                  idag(i).log(s"ICache ${i}", load.tick)
+                }
+              } else {
+                idag(i).log(s"ICache ${i}", load.tick)
+              }
             }catch{
               case e: FailedExpectException =>
               idag(i).incrementLoadTime(load.tick)
@@ -302,7 +321,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
 
   val (dag, idag) = buildDAGs(testFolder, testName, numTiles)
 
-  runSimulation(dag, idag, numTiles, l2ways, traceVCD)
+  runSimulation(dag, idag, numTiles, l2ways, traceVCD, fromCsv)
 }
 
 it should "Run_HOL_synthetic" in {
