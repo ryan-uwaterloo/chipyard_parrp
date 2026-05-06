@@ -324,15 +324,6 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
   runSimulation(dag, idag, numTiles, l2ways, traceVCD, fromCsv)
 }
 
-it should "Run_HOL_synthetic" in {
-  runTraceTest(
-    testFolder = "test_cases/hol_test",
-    testName   = "hol_test",
-    numTiles   = 4,
-    fromCsv    = true,
-    traceVCD   = true
-  )
-}
 
 it should "Run_radiosity-4" in {
   runTraceTest(

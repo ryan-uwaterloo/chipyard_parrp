@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scienceplots
+import os
 from matplotlib.patches import Patch
 from scipy.stats import gaussian_kde
 from pathlib import Path
@@ -42,7 +43,7 @@ OUTPUT_FILE      = "reqtime_violin_synth.svg"
 HIT_MISS_CSV_OUT = "hit_miss_summary_synth.csv"
 
 CHUNK_SIZE  = 5_000_000
-MIN_SAMPLES = 30
+MIN_SAMPLES = 5
 
 # ============================================================
 # Static SourceID -> (core, cache_type) map
@@ -272,6 +273,8 @@ def load_reqtimes(test_variant: str, cache_type: str) -> dict[str, np.ndarray]:
         return {k: np.array([], dtype=np.float32) for k in accum}
 
     for path in csvs:
+        if os.path.getsize(path) == 0:
+            continue
         print(f"  Reading {path.name} ...")
         for chunk in pd.read_csv(path, usecols=["nodeType", "reqTime"],
                                  chunksize=CHUNK_SIZE):
