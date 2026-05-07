@@ -14,26 +14,27 @@ plt.style.use(['science', 'ieee'])
 # Configuration (Hard-coded for paper reproducibility)
 # ============================================================
 
-DATA_DIR = "../parsed/synth"
+DATA_DIR = "../parsed/synthetics"
+DATA_START = 50_000
 
 # List of test names — filenames are derived automatically:
 #   L1:          {DATA_DIR}/{test}-l1-{ctrl,parrp}.csv
 #   L1-release:  {DATA_DIR}/{test}-l1-{ctrl,parrp}_releases.csv
 #   LLC:         {DATA_DIR}/{test}-{ctrl,parrp}.csv
 TESTS = [
-    "nmshrs",
-    "probe",
-    "relbuf",
-    "hol",
+    "probe-4",
+    "relbuf-4",
+    "nmshrs-4",
+    "hol-4",
     # "other-test",
 ]
 
 # Labels shown on the x-axis, one per test
 TEST_LABELS = [
-    "nMSHRs",
     "Probe",
-    "ReleaseBuffer",
-    "HoL"
+    "RelBuf",
+    "nMSHRs",
+    "HoL",
     # "Other Test",
 ]
 
@@ -110,7 +111,7 @@ def load_miss_penalty(filepath):
     for chunk in pd.read_csv(filepath, usecols=["MissPenalty", "StartCycle"], chunksize=CHUNK_SIZE):
         values = chunk["MissPenalty"].to_numpy(dtype=np.uint16)
         start_cycles = chunk["StartCycle"].to_numpy(dtype=np.uint64)
-        mask = (start_cycles >= 10_000) & (values >= 10)
+        mask = (start_cycles >= DATA_START) & (values >= 10)
         values = values[mask]
         if len(values) == 0:
             continue
@@ -122,52 +123,90 @@ def load_miss_penalty(filepath):
     return full_array, global_min, global_max
 
 
-def load_eviction_time(release_filepath, l1_filepath, chunk_size=CHUNK_SIZE):
+def load_eviction_time(release_filepath, l1_filepath, num_sets=64, chunk_size=CHUNK_SIZE):
+    assert (num_sets & (num_sets - 1)) == 0, f"num_sets must be a power of 2, got {num_sets}"
+
     def index_bits(addr_series):
-        return addr_series.apply(lambda x: (int(x, 16) >> 6) & 0x3F)
+        ints = np.array([int(x, 16) for x in addr_series], dtype=np.int64)
+        return ((ints >> 6) & (num_sets - 1)).astype(np.int32)
 
     l1 = pd.read_csv(l1_filepath, usecols=["Address", "Core", "StartCycle", "EndCycle"])
     l1["Core"] = l1["Core"].str.lower()
     l1["IndexBits"] = index_bits(l1["Address"])
-    l1["TargetCycle"] = l1["EndCycle"] - 3
+    l1["TargetCycle"] = (l1["EndCycle"] - 3).astype(np.int32)
+    l1 = l1[["Core", "IndexBits", "StartCycle", "EndCycle", "TargetCycle"]].rename(
+        columns={"StartCycle": "l1_start", "EndCycle": "l1_end"}
+    )
 
-    lookup = defaultdict(list)
-    for row in l1.itertuples(index=False):
-        lookup[(row.Core, row.IndexBits)].append((row.StartCycle, row.EndCycle, row.TargetCycle))
+    # Sort l1 so we can use searchsorted instead of a join
+    l1 = l1.sort_values(["Core", "IndexBits", "l1_start"]).reset_index(drop=True)
 
-    eviction_times = []
+    results = []
+    global_min = float("inf")
+    global_max = float("-inf")
 
-    for chunk in pd.read_csv(release_filepath, usecols=["Address", "Core", "StartCycle"], chunksize=chunk_size):
-        chunk = chunk[chunk["StartCycle"] >= 10_000]
+    for chunk in pd.read_csv(
+        release_filepath,
+        usecols=["Address", "Core", "StartCycle"],
+        chunksize=chunk_size,
+    ):
+        chunk = chunk[chunk["StartCycle"] >= DATA_START].copy()
         chunk["Core"] = chunk["Core"].str.lower()
         chunk["IndexBits"] = index_bits(chunk["Address"])
 
-        for row in chunk.itertuples(index=False):
-            candidates = lookup.get((row.Core, row.IndexBits), [])
-            best, best_dist = None, float("inf")
-            for (l1_start, l1_end, target) in candidates:
-                if l1_start <= row.StartCycle <= l1_end:
-                    dist = abs(row.StartCycle - l1_start)
-                    if dist < best_dist:
-                        best_dist, best = dist, target
-            if best is not None:
-                eviction_times.append(best - row.StartCycle)
+        eviction_times = []
 
-    return np.array(eviction_times, dtype=np.int32)
+        for (core, idx_bits), rel_group in chunk.groupby(["Core", "IndexBits"]):
+            l1_group = l1[(l1["Core"] == core) & (l1["IndexBits"] == idx_bits)]
+            if l1_group.empty:
+                continue
+
+            starts = l1_group["l1_start"].to_numpy()
+            ends   = l1_group["l1_end"].to_numpy()
+            targets = l1_group["TargetCycle"].to_numpy()
+
+            rel_cycles = rel_group["StartCycle"].to_numpy()
+
+            # For each release cycle, find candidate l1 intervals via searchsorted
+            pos = np.searchsorted(starts, rel_cycles, side="right") - 1
+
+            for j, (cycle, p) in enumerate(zip(rel_cycles, pos)):
+                if p < 0:
+                    continue
+                if starts[p] <= cycle <= ends[p]:
+                    eviction_times.append(targets[p] - cycle)
+                    # print(f"{cycle}, {targets[p] - cycle}")
+
+        if eviction_times:
+            results.append(np.array(eviction_times, dtype=np.int32))
+            global_min = min(global_min, min(eviction_times))
+            global_max = max(global_max, max(eviction_times))
+
+    full_array = np.concatenate(results) if results else np.array([], dtype=np.int32)
+    return full_array, global_min, global_max
 
 def load_eviction_time_ctrl(release_filepath, chunk_size=CHUNK_SIZE):
     chunks = []
+    global_min = float("inf")
+    global_max = float("-inf")
     for chunk in pd.read_csv(release_filepath, usecols=["Latency", "StartCycle"], chunksize=chunk_size):
-        mask = chunk["StartCycle"] >= 10_000
-        chunks.append(chunk.loc[mask, "Latency"].to_numpy(dtype=np.int32))
-    return np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
+        mask = chunk["StartCycle"] >= DATA_START
+        values = chunk.loc[mask, "Latency"].to_numpy(dtype=np.int32)
+        chunks.append(values)
+
+        if values.any():
+            global_min = min(global_min, values.min())
+            global_max = max(global_max, values.max())
+        
+    full_array = np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
+    return full_array, global_min, global_max
 
 
 def load_source_d_to_complete(llc_filepath, chunk_size=CHUNK_SIZE):
     RELEASE_OPCODES = {"Release", "ReleaseData"}
     chunks = []
     for chunk in pd.read_csv(llc_filepath, usecols=["Opcode", "SourceDToComplete", "StartCycle"], chunksize=chunk_size):
-        mask = chunk["Opcode"].str.strip().isin(RELEASE_OPCODES) & (chunk["StartCycle"] >= 10_000)
+        mask = chunk["Opcode"].str.strip().isin(RELEASE_OPCODES) & (chunk["StartCycle"] >= DATA_START)
         values = pd.to_numeric(chunk.loc[mask, "SourceDToComplete"], errors="coerce").dropna()
         chunks.append(values.to_numpy(dtype=np.int32))
     return np.concatenate(chunks) if any(len(c) > 0 for c in chunks) else np.array([], dtype=np.int32)
@@ -208,16 +247,26 @@ def make_half_violin(ax, data, x_center, side, color, hatch, max_area, bw_method
                          facecolor='white', edgecolor=color, hatch=hatch, alpha=1, linewidth=0.5)
 
 
+def is_degenerate(data, tol=1e-6):
+    return len(data) == 0 or np.ptp(data) < tol
+
+
 def draw_violin_pair(ax, data_ctrl, data_parrp, x_pos, half_width=0.35, gap=0.01):
-    has_ctrl  = len(data_ctrl)  > 0
-    has_parrp = len(data_parrp) > 0
+    has_ctrl  = len(data_ctrl)  > 0 and not is_degenerate(data_ctrl)
+    has_parrp = len(data_parrp) > 0 and not is_degenerate(data_parrp)
 
     if not has_ctrl and not has_parrp:
-        ax.text(x_pos, 0.5, "No data", ha='center', va='center',
-                transform=ax.get_xaxis_transform(), fontsize=6, color='gray')
+        # Could be no data, or all data degenerate — show the value if we have it
+        for data, xoff, ha in [(data_ctrl, -gap, 'right'), (data_parrp, gap, 'left')]:
+            if len(data) > 0:
+                ax.axhline(np.mean(data), color='gray', linewidth=0.5, linestyle='--')
+                ax.text(x_pos + xoff, np.mean(data), f"{np.mean(data):.1f}",
+                        ha=ha, va='bottom', fontsize=5, color='gray')
+            else:
+                ax.text(x_pos + xoff, 0.5, "No data", ha=ha, va='center',
+                        transform=ax.get_xaxis_transform(), fontsize=6, color='gray')
         return
 
-    # Compute areas independently if one side is missing
     if has_ctrl and has_parrp:
         shared_area = min(
             compute_max_area(data_ctrl,  half_width),
@@ -236,15 +285,19 @@ def draw_violin_pair(ax, data_ctrl, data_parrp, x_pos, half_width=0.35, gap=0.01
         make_half_violin(ax, data_ctrl,  x_pos - gap, 'left',  'red',  '////////', area_ctrl)
         ax.hlines(np.mean(data_ctrl),  x_pos - half_width, x_pos - gap, linewidth=0.8, color='k')
     else:
-        ax.text(x_pos - gap, 0.5, "N/A", ha='right', va='center',
-                transform=ax.get_xaxis_transform(), fontsize=5, color='gray')
+        # Degenerate — draw a spike at the single value
+        val = np.mean(data_ctrl)
+        ax.hlines(val, x_pos - half_width, x_pos - gap, linewidth=0.8, color='k', linestyle='--')
+        ax.text(x_pos - gap, val, f"{val:.1f}", ha='right', va='bottom', fontsize=5, color='red')
 
     if has_parrp:
         make_half_violin(ax, data_parrp, x_pos + gap, 'right', 'blue', 'xxxxxxxx', area_parrp)
         ax.hlines(np.mean(data_parrp), x_pos + gap, x_pos + half_width, linewidth=0.8, color='r')
     else:
-        ax.text(x_pos + gap, 0.5, "N/A", ha='left', va='center',
-                transform=ax.get_xaxis_transform(), fontsize=5, color='gray')
+        # Degenerate — draw a spike at the single value
+        val = np.mean(data_parrp)
+        ax.hlines(val, x_pos + gap, x_pos + half_width, linewidth=0.8, color='r', linestyle='--')
+        ax.text(x_pos + gap, val, f"{val:.1f}", ha='left', va='bottom', fontsize=5, color='blue')
 
 
 # ============================================================
@@ -270,15 +323,20 @@ def main():
 
         if PLOT_MISS_PENALTY:
             print("  Loading miss penalty (ctrl)...")
-            entry["miss_penalty_ctrl"],  _, _ = load_miss_penalty(p["l1_ctrl"])
+            entry["miss_penalty_ctrl"],  entry["min_miss_ctrl"], entry["max_miss_ctrl"] = load_miss_penalty(p["l1_ctrl"])
+            print(f"{entry["min_miss_ctrl"]}, {entry["max_miss_ctrl"]}")
             print("  Loading miss penalty (parrp)...")
-            entry["miss_penalty_parrp"], _, _ = load_miss_penalty(p["l1_parrp"])
+            entry["miss_penalty_parrp"], entry["min_miss_parrp"], entry["max_miss_parrp"] = load_miss_penalty(p["l1_parrp"])
+            print(f"{entry["min_miss_parrp"]}, {entry["max_miss_parrp"]}")
 
         if PLOT_EVICTION_TIME:
+            num_sets = 128 if "moresets" in test else 64
             print("  Loading eviction time (ctrl)...")
-            entry["eviction_time_ctrl"]  = load_eviction_time_ctrl(p["rel_ctrl"])
+            entry["eviction_time_ctrl"], entry["min_evict_ctrl"], entry["max_evict_ctrl"]  = load_eviction_time_ctrl(p["rel_ctrl"])
+            print(f"{entry["min_evict_ctrl"]}, {entry["max_evict_ctrl"]}")
             print("  Loading eviction time (parrp)...")
-            entry["eviction_time_parrp"] = load_eviction_time(p["rel_parrp"], p["l1_parrp"])
+            entry["eviction_time_parrp"], entry["min_evict_parrp"], entry["max_evict_parrp"] = load_eviction_time(p["rel_parrp"], p["l1_parrp"], num_sets)
+            print(f"{entry["min_evict_parrp"]}, {entry["max_evict_parrp"]}")
 
         if PLOT_RESIDUAL:
             print("  Loading LLC residual (ctrl)...")
