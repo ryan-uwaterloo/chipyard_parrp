@@ -51,7 +51,6 @@ traces/parsed/*.csv
 traces/mrt_data/*.csv
 traces/parsed/synthetics/*.csv
 traces/parsed/synth/*.csv
-traces/test_cases/*
 traces/parsed/*.csv
 traces/parsed/final/*.csv
 traces/scripts/pyvenv.cfg
