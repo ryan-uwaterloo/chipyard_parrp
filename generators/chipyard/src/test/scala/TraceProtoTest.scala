@@ -474,6 +474,26 @@ it should "Synthetic-relbuf-4" in {
   )
 }
 
+it should "Synthetic-inter-int-4" in {
+  runTraceTest(
+    testFolder = "test_cases/interference_test_int",
+    testName = "inter-int-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = true
+  )
+}
+
+it should "Synthetic-inter-iso-4" in {
+  runTraceTest(
+    testFolder = "test_cases/interference_test_iso",
+    testName = "inter-iso-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = true
+  )
+}
+
   // it should "Run_a_DAG_from_csv_synthetics" in {
   //   var clock = 0x0L
   //   val numTiles = 4

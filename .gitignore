@@ -58,3 +58,10 @@ test_run_dir/
 tools/siliconcompiler/build/
 build/
 traces/scripts/venv/
+traces/test_cases/*.proto.gz
+traces/test_cases/hol_test/*.proto.gz
+traces/test_cases/interference_test_int/*.proto.gz
+traces/test_cases/interference_test_iso/*.proto.gz
+traces/test_cases/nmshrs_test/*.proto.gz
+traces/test_cases/releasebuf_test/*.proto.gz
+traces/test_cases/probe_test/*.proto.gz
