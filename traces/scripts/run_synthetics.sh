@@ -3,7 +3,7 @@ run_test=true
 run_parse=true
 
 cd ../..
-for t in probe nmshrs hol relbuf; do
+for t in probe nmshrs hol relbuf inter-iso inter-int; do
   if $run_test == true; then
     TRACE_DIR=./traces sbt -mem 6000 "project chipyard" \
         "testOnly chipyard.ProtoTest -- -z Synthetic-$t-4 -oD" \
