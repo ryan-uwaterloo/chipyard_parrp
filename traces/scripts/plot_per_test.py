@@ -200,8 +200,8 @@ TEST_CONFIGS = [
             "llc_residual":   False,
             "probe_latency":  True,
             "dram":           False,
-            "reqtime_load":   True,
-            "reqtime_store":  True,
+            "reqtime_load":   False,
+            "reqtime_store":  False,
         },
         # "output": "probe-4.svg",   # uncomment to override default
         # "num_sets": 64,

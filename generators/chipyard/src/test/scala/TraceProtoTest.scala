@@ -434,6 +434,16 @@ it should "Run_water-spatial-4" in {
   )
 }
 
+it should "Run_nqueens-4" in {
+  runTraceTest(
+    testFolder = "nqueens-8",
+    testName = "nqueens-4",
+    numTiles = 4,
+    fromCsv = false,
+    traceVCD = false
+  )
+}
+
 it should "Synthetic-nmshrs-4" in {
   runTraceTest(
     testFolder = "test_cases/nmshrs_test",

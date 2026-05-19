@@ -95,6 +95,31 @@ def build_paths(test: str, data_dir: str) -> dict[str, str]:
     }
 
 
+def build_paths_iso_int(base: str, data_dir: str) -> dict[str, dict[str, str]]:
+    """
+    Return paths for an isolation/interference test pair.
+
+    The filename convention is:
+        inter-{iso|int}-{base}-{ctrl|parrp}.csv   (and derivative suffixes)
+
+    Parameters
+    ----------
+    base     : suffix after iso/int, e.g. "4"  -> inter-iso-4-ctrl.csv
+    data_dir : directory containing the CSVs
+
+    Returns
+    -------
+    {
+      "iso": { same keys as build_paths() },
+      "int": { same keys as build_paths() },
+    }
+    """
+    return {
+        condition: build_paths(f"inter-{condition}-{base}", data_dir)
+        for condition in ("iso", "int")
+    }
+
+
 def reqtime_csv_path(test_variant: str, core: int, cache_type: str,
                      memreq_dir: str) -> Path:
     return Path(memreq_dir) / f"{test_variant}.{core}_{cache_type}.csv"
