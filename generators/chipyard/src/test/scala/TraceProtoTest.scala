@@ -464,6 +464,16 @@ it should "Synthetic-hol-4" in {
   )
 }
 
+it should "Synthetic-hol-8" in {
+  runTraceTest(
+    testFolder = "test_cases/hol_test",
+    testName = "hol-8",
+    numTiles = 8,
+    fromCsv = true,
+    traceVCD = true
+  )
+}
+
 it should "Synthetic-probe-4" in {
   runTraceTest(
     testFolder = "test_cases/probe_test",
@@ -478,6 +488,16 @@ it should "Synthetic-relbuf-4" in {
   runTraceTest(
     testFolder = "test_cases/releasebuf_test",
     testName = "relbuf-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = true
+  )
+}
+
+it should "Synthetic-mempressure-4" in {
+  runTraceTest(
+    testFolder = "test_cases/releasebuf_test_diffsets",
+    testName = "mempressure-4",
     numTiles = 4,
     fromCsv = true,
     traceVCD = true

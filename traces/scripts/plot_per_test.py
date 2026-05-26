@@ -209,16 +209,31 @@ TEST_CONFIGS = [
     {
         "test":  "relbuf-4",
         "label": "RelBuf",
+        "data_start": 50_000,
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
             "llc_residual":   True,
-            "probe_latency":  False,
-            "dram":           False,
+            "probe_latency":  True,
+            "dram":           True,
             "reqtime_load":   False,
             "reqtime_store":  True,
         },
     },
+    # {
+    #     "test":  "mempressure-4",
+    #     "label": "MemPressure",
+    #     "data_start": 100_000,
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   True,
+    #         "probe_latency":  True,
+    #         "dram":           True,
+    #         "reqtime_load":   False,
+    #         "reqtime_store":  True,
+    #     },
+    # },
     {
         "test":  "nmshrs-4",
         "label": "nMSHRs",
