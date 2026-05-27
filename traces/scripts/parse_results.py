@@ -199,6 +199,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 mshr_set   = int(m[7], 16)   # bits [11:6] directly from the log
                 tag        = int(m[8], 16)
 
+                # Look up the sink arrival time for this source so we can later
+                # compute SetBlockTime = MSHR_entry_cycle - sink_arrival_cycle.
+                # We search sink_times for any opcode matching this source because
+                # the MSHR line doesn't carry the opcode directly.
+                sink_start = next(
+                    (t for (s, _op), t in sink_times.items() if s == src), None
+                )
+
                 request_meta[src] = {
                     "need_dram":  dram,
                     "need_probe": need_probe,
@@ -207,6 +215,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     "meta_cycle": cycle,
                     "set":        mshr_set,
                     "tag":        tag,
+                    "sink_start": sink_start,  # None if MSHR somehow precedes sink (shouldn't happen)
                 }
 
                 if need_probe:
@@ -478,12 +487,20 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         with open(csv_out, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Latency",
+                             "SetBlockTime",
                              "ReleaseStallCycles", "SourceDCycle", "SourceDToComplete",
                              "NeedDRAM", "NeedProbe", "Evicting", "BackInv"])
             for src, opcode, start, end, lat, meta, stalls, source_d_cycle in results:
                 d_to_complete = (end - source_d_cycle) if source_d_cycle is not None else ""
+                meta_cycle  = meta.get('meta_cycle')
+                sink_start  = meta.get('sink_start')
+                set_block_time = (meta_cycle - sink_start
+                                  if meta_cycle is not None and sink_start is not None
+                                  else "")
                 writer.writerow([
-                    f"0x{src:X}", opcode, start, end, lat, stalls,
+                    f"0x{src:X}", opcode, start, end, lat,
+                    set_block_time,
+                    stalls,
                     source_d_cycle if source_d_cycle is not None else "",
                     d_to_complete,
                     meta.get('need_dram',''), meta.get('need_probe',''),
@@ -495,7 +512,6 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         with open(dram_csv, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "StartCycle", "EndCycle", "Latency"])
-
             for src, start, end, lat in dram_results:
                 writer.writerow([f"0x{src:X}", start, end, lat])
         print(f"\n DRAM results written to {dram_csv}")
