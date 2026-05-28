@@ -203,9 +203,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 # compute SetBlockTime = MSHR_entry_cycle - sink_arrival_cycle.
                 # We search sink_times for any opcode matching this source because
                 # the MSHR line doesn't carry the opcode directly.
-                sink_start = next(
-                    (t for (s, _op), t in sink_times.items() if s == src), None
-                )
+                candidates = [t for (s, _op), t in sink_times.items() if s == src and t <= cycle]
+                sink_start = max(candidates) if candidates else None
 
                 request_meta[src] = {
                     "need_dram":  dram,
