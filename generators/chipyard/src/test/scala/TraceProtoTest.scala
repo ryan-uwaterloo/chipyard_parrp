@@ -302,7 +302,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         c.clock.step()
       }
 
-      c.clock.step(100)
+      c.clock.step(10000)
 
       dag.foreach(_.closeLogger())
       idag.foreach(_.closeLogger())
