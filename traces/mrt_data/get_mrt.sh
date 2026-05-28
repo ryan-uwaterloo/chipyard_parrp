@@ -12,5 +12,5 @@ fi
 
 for f in ${SRC}/${PREFIX}.*.csv; do
     [[ -e "$f" ]] || { echo "No files matched"; exit 1; }
-    mv "$f" "./${PREFIX}${MODIFIER}.$(basename "$f" | sed "s/${PREFIX}\.//")"
+    cp "$f" "./${PREFIX}${MODIFIER}.$(basename "$f" | sed "s/${PREFIX}\.//")"
 done
