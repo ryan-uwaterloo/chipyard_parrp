@@ -469,6 +469,7 @@ it should "Synthetic-hol-8" in {
     testFolder = "test_cases/hol_test",
     testName = "hol-8",
     numTiles = 8,
+    l2ways = 80,
     fromCsv = true,
     traceVCD = true
   )
