@@ -115,7 +115,8 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     numTiles: Int,
     l2ways: Int,
     traceVCD: Boolean,
-    fromCsv: Boolean
+    fromCsv: Boolean,
+    testStartCycle: Int
   ): Unit = {
     var clock = 0L
 
@@ -214,7 +215,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
 
               dag(i).acknowledgeLoad(load.seqNum)
               if (fromCsv) {
-                if (clock > 50000) {
+                if (clock > testStartCycle) {
                   dag(i).log(s"DCache ${i}", load.seqNum)
                 }
               } else {
@@ -235,7 +236,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
 
               dag(i).acknowledgeStore(store.seqNum)
               if (fromCsv) {
-                if (clock > 50000) {
+                if (clock > testStartCycle) {
                   dag(i).log(s"DCache ${i}", store.seqNum)
                 }
               } else {
@@ -285,7 +286,7 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
 
               idag(i).acknowledgeLoad(load.tick)
               if (fromCsv) {
-                if (clock > 50000) {
+                if (clock > testStartCycle) {
                   idag(i).log(s"ICache ${i}", load.tick)
                 }
               } else {
@@ -315,13 +316,14 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
   numTiles: Int,
   fromCsv: Boolean,
   l2ways: Int = 40,
-  traceVCD: Boolean = false
+  traceVCD: Boolean = false,
+  testStartCycle: Int = 50000
 ): Unit = { 
   prepareTraces(testFolder, numTiles, fromCsv)
 
   val (dag, idag) = buildDAGs(testFolder, testName, numTiles)
 
-  runSimulation(dag, idag, numTiles, l2ways, traceVCD, fromCsv)
+  runSimulation(dag, idag, numTiles, l2ways, traceVCD, fromCsv, testStartCycle)
 }
 
 
@@ -501,7 +503,8 @@ it should "Synthetic-mempressure-4" in {
     testName = "mempressure-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = true
+    traceVCD = true,
+    testStartCycle = 200000
   )
 }
 

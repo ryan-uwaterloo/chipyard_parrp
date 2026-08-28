@@ -9,6 +9,10 @@ def addr_set(addr):
     """Extract set bits [11:6] from an address."""
     return (addr >> 6) & 0x3F
 
+def addr_tag(addr):
+    """Extract the tag from an address, assuming set bits are [11:6]."""
+    return addr >> 12
+
 def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # Regex patterns
     sink_re = re.compile(
@@ -55,6 +59,11 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     sink_c_probeack_re = re.compile(
         r"@ clk_cycle\s+(\d+): New Sink C Request! opcode: ProbeAck(?:Data)?, addr:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    l1_probe_new_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New L1 Probe Req! "
+        r"Address:\s*(0x[0-9a-fA-F]+), "
+        r"Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
 
 
     # --- State maps ---
@@ -69,22 +78,33 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_release_start = {}   # (addr, core) -> cycle
     l1_release_results = [] # (addr, core, start, end, latency)
 
-    # Probe tracking keyed by *set* (bits [11:6] of the address).
+    # -----------------------------------------------------------------------
+    # Probe tracking
     #
-    # Multiple MSHR entries can target the same set concurrently, so we keep a
-    # list of (start_cycle, mshr_source) per set.  When a ProbeAck arrives, its
-    # address is also reduced to the set, and we match it against the oldest
-    # pending entry for that set once all expected acks have arrived.
+    # A single MSHR can launch multiple L1 probes. All of those probes share
+    # the MSHR's start cycle, but each ProbeAck produces its own result.
     #
-    # probe_start[set]       – list of (start_cycle, mshr_source), FIFO order
-    # l1_probe_expected[set] – total acks still expected for the *current* probe
-    # l1_probe_received[set] – acks received so far for the current probe
+    # Probe batches are keyed by (set, tag):
     #
-    # When received >= expected the front entry is popped and counters reset,
-    # ready for the next probe on the same set.
-    probe_start = defaultdict(list)      # set -> [(start_cycle, mshr_source), ...]
-    l1_probe_expected = defaultdict(int) # set -> expected ack count
-    l1_probe_received = defaultdict(int) # set -> received ack count
+    #   probe_batches[(set, tag)] = [
+    #       {
+    #           "start":    MSHR start cycle,
+    #           "source":   MSHR source,
+    #           "expected": number of L1 Probe Req events,
+    #           "received": number of ProbeAck events,
+    #       },
+    #       ...
+    #   ]
+    #
+    # The list is ordered oldest -> newest.
+    #
+    # When a ProbeAck arrives, it is assigned to the MOST RECENT batch for
+    # that (set, tag) which still has an outstanding probe.
+    #
+    # Each individual ProbeAck generates one probe_results entry, using the
+    # MSHR batch's start cycle.
+    # -----------------------------------------------------------------------
+    probe_batches = defaultdict(list)
     probe_results = []                   # (set, start, end, latency, mshr_source)
 
     pending_source_d = {}  # src -> (opcode, start_cycle, end_cycle, latency, meta, stall_cycles)
@@ -118,37 +138,96 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         for line_no, line in enumerate(f, 1):
 
             # ---------------------------------------------------------------
-            # ProbeAck (Sink C): match by *set* of the ack address.
-            # The ack address is not guaranteed to equal the MSHR address, but
-            # bits [11:6] (the set) must agree.
+            # ProbeAck (Sink C)
+            #
+            # Match the ACK to the most recent MSHR probe batch for the same
+            # (set, tag) which still has an outstanding probe.
+            #
+            # Each ACK produces its own result, but uses the MSHR batch's
+            # start cycle.
             # ---------------------------------------------------------------
             if m := sink_c_probeack_re.search(line):
                 cycle = int(m[1])
                 addr  = int(m[2], 16)
-                s     = addr_set(addr)
 
-                if probe_start[s]:
-                    l1_probe_received[s] += 1
+                s   = addr_set(addr)
+                tag = addr_tag(addr)
+
+                probe_key = (s, tag)
+                batches = probe_batches.get(probe_key)
+
+                if not batches:
                     if debug:
-                        print(f"[line {line_no}] PROBE ACK addr=0x{addr:X} (set=0x{s:X}), "
-                              f"received={l1_probe_received[s]}, expected={l1_probe_expected[s]}")
-                    if l1_probe_received[s] >= l1_probe_expected[s]:
-                        # All acks received — complete the oldest pending probe.
-                        start_cycle, mshr_source = probe_start[s].pop(0)
-                        latency = cycle - start_cycle
-                        probe_results.append((s, start_cycle, cycle, latency, mshr_source))
-                        if debug:
-                            print(f"[line {line_no}] PROBE COMPLETE set=0x{s:X}, "
-                                  f"start={start_cycle}, end={cycle}, lat={latency}, "
-                                  f"mshr_source=0x{mshr_source:X}")
-                        # Reset per-set counters; the next probe on this set
-                        # will increment l1_probe_expected again from the MSHR line.
-                        l1_probe_expected[s] = 0
-                        l1_probe_received[s] = 0
-                else:
+                        print(
+                            f"[line {line_no}] UNMATCHED PROBE ACK "
+                            f"addr=0x{addr:X}, "
+                            f"set=0x{s:X}, tag=0x{tag:X}, "
+                            f"cycle={cycle}"
+                        )
+                    continue
+
+                # Search newest -> oldest.
+                #
+                # This implements the desired rule:
+                # "attribute each ProbeAck to the most recent probe start
+                # that matches the address."
+                batch = None
+
+                for candidate in reversed(batches):
+                    if candidate["received"] < candidate["expected"]:
+                        batch = candidate
+                        break
+
+                if batch is None:
                     if debug:
-                        print(f"[line {line_no}] PROBE ACK addr=0x{addr:X} (set=0x{s:X}) "
-                              f"— no pending probe for this set, ignoring")
+                        print(
+                            f"[line {line_no}] PROBE ACK has no outstanding "
+                            f"probe slot: addr=0x{addr:X}, "
+                            f"set=0x{s:X}, tag=0x{tag:X}, "
+                            f"cycle={cycle}"
+                        )
+                    continue
+
+                # One ProbeAck completes one L1 probe.
+                batch["received"] += 1
+
+                start_cycle = batch["start"]
+                mshr_source = batch["source"]
+                latency = cycle - start_cycle
+
+                probe_results.append(
+                    (s, start_cycle, cycle, latency, mshr_source)
+                )
+
+                if debug:
+                    print(
+                        f"[line {line_no}] PROBE ACK "
+                        f"addr=0x{addr:X}, "
+                        f"set=0x{s:X}, tag=0x{tag:X}, "
+                        f"-> MSHR source=0x{mshr_source:X}, "
+                        f"start={start_cycle}, end={cycle}, "
+                        f"lat={latency}, "
+                        f"received={batch['received']}/"
+                        f"{batch['expected']}"
+                    )
+
+                # Once all probes belonging to this MSHR have ACKed,
+                # remove the batch.
+                if batch["received"] == batch["expected"]:
+                    batches.remove(batch)
+
+                    if debug:
+                        print(
+                            f"[line {line_no}] PROBE BATCH COMPLETE "
+                            f"set=0x{s:X}, tag=0x{tag:X}, "
+                            f"source=0x{mshr_source:X}, "
+                            f"start={start_cycle}, "
+                            f"probes={batch['expected']}"
+                        )
+
+                    if not batches:
+                        del probe_batches[probe_key]
+
                 continue
 
             # --- Match Sink arrivals ---
@@ -218,13 +297,23 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 }
 
                 if need_probe:
-                    # Start probe timing from this MSHR arrival cycle.
-                    probe_start[mshr_set].append((cycle, src))
-                    l1_probe_expected[mshr_set] += 1
+                    # Create a new probe batch. The MSHR cycle is the start
+                    # time for EVERY L1 probe launched by this batch.
+                    probe_key = (mshr_set, tag)
+
+                    probe_batches[probe_key].append({
+                        "start": cycle,
+                        "source": src,
+                        "expected": 0,
+                        "received": 0,
+                    })
+
                     if debug:
-                        print(f"[line {line_no}] PROBE START (MSHR) set=0x{mshr_set:X}, "
-                              f"source=0x{src:X}, cycle={cycle}, "
-                              f"total_expected_now={l1_probe_expected[mshr_set]}")
+                        print(
+                            f"[line {line_no}] PROBE BATCH START "
+                            f"set=0x{mshr_set:X}, tag=0x{tag:X}, "
+                            f"source=0x{src:X}, cycle={cycle}"
+                        )
 
                 if debug:
                     print(f"[line {line_no}] Metadata captured for source=0x{src:X}: {request_meta[src]}")
@@ -370,6 +459,49 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
                     del sink_times[sink_key]
                     last_completion[sink_key] = cycle
+
+            # ---------------------------------------------------------------
+            # L1 Probe Request
+            #
+            # Each of these represents one actual probe launched by an MSHR.
+            # Increment the expected count of the most recent matching MSHR
+            # probe batch.
+            # ---------------------------------------------------------------
+            if m := l1_probe_new_re.search(line):
+                cycle = int(m[1])
+                addr  = int(m[2], 16)
+                core  = int(m[3], 16)
+
+                s   = addr_set(addr)
+                tag = addr_tag(addr)
+
+                probe_key = (s, tag)
+                batches = probe_batches.get(probe_key)
+
+                if not batches:
+                    if debug:
+                        print(
+                            f"[line {line_no}] UNMATCHED L1 PROBE REQ "
+                            f"addr=0x{addr:X}, "
+                            f"set=0x{s:X}, tag=0x{tag:X}, "
+                            f"core=0x{core:X}, cycle={cycle}"
+                        )
+                else:
+                    # The newest MSHR batch owns newly-launched probes.
+                    batch = batches[-1]
+                    batch["expected"] += 1
+
+                    if debug:
+                        print(
+                            f"[line {line_no}] PROBE REQ "
+                            f"addr=0x{addr:X}, core=0x{core:X}, "
+                            f"set=0x{s:X}, tag=0x{tag:X}, "
+                            f"-> MSHR source=0x{batch['source']:X}, "
+                            f"start={batch['start']}, "
+                            f"expected={batch['expected']}"
+                        )
+
+                continue
 
             # --- L1 new requests ---
             if m := l1_new_re.search(line):
@@ -563,7 +695,12 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 writer.writerow([f"0x{s:X}", f"0x{mshr_source:X}", start, end, lat])
         print(f"\nProbe results written to {probe_csv}")
 
-        pending_probe_count = sum(len(v) for v in probe_start.values())
+        pending_probe_count = sum(
+            1
+            for batches in probe_batches.values()
+            for batch in batches
+            if batch["received"] < batch["expected"]
+        )
         print(f"\nL1 Probe Summary:")
         print(f"  {len(probe_results)} Probes completed")
         print(f"  {pending_probe_count} Probes still pending")
@@ -575,12 +712,31 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
             print(f"    - Source 0x{src:X}, opcode={opcode}, issued @ {start_cycle}")
 
     if debug:
-        pending_probe_count = sum(len(v) for v in probe_start.values())
+        pending_probe_count = sum(
+            1
+            for batches in probe_batches.values()
+            for batch in batches
+            if batch["received"] < batch["expected"]
+        )
         if pending_probe_count:
             print("\n [WARN] Pending probes (unmatched):")
-            for s, entries in sorted(probe_start.items()):
-                for start_cycle, mshr_source in entries:
-                    print(f"    - Set=0x{s:X}, mshr_source=0x{mshr_source:X}, started @ {start_cycle}")
+
+            for (s, tag), batches in sorted(probe_batches.items()):
+                for batch in batches:
+                    outstanding = (
+                        batch["expected"] - batch["received"]
+                    )
+
+                    if outstanding > 0:
+                        print(
+                            f"    - Set=0x{s:X}, "
+                            f"Tag=0x{tag:X}, "
+                            f"mshr_source=0x{batch['source']:X}, "
+                            f"started @ {batch['start']}, "
+                            f"probes={batch['received']}/"
+                            f"{batch['expected']} "
+                            f"({outstanding} outstanding)"
+                        )
 
     # --- Min/Max latency summaries ---
     print("\nMin/Max Latency Events:")
