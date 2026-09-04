@@ -142,13 +142,13 @@ def draw_violin_pair(
         ax.hlines(
             np.mean(data_mod),
             x_pos + gap, x_pos + half_width,
-            linewidth=0.8, color="r",
+            linewidth=0.8, color="k",
         )
     else:
         val = np.mean(data_mod) if len(data_mod) > 0 else None
         if val is not None:
             ax.hlines(val, x_pos + gap, x_pos + half_width,
-                      linewidth=0.8, color="r", linestyle="--")
+                      linewidth=0.8, color="k", linestyle="--")
             ax.text(x_pos + gap, val, f"{val:.1f}",
                     ha="left", va="bottom", fontsize=5, color=mod_color)
         else:

@@ -1,0 +1,47 @@
+# tag_stride is auto-derived as num_sets_total * line_size_bytes (4096 here),
+# so each distinct tag value lands on a fresh "page" that contains every set
+# exactly once -- override cache.tag_stride explicitly if your address map
+# differs.
+
+seed: 42
+base_addr: 0x10000000
+
+cache:
+  line_size_bytes: 64
+  num_sets_total: 64
+  # tag_stride: 0x1000   # uncomment to override the auto-derived value
+
+# This trace exercises core 0's partition: sets [0, 16).
+# Set core_id: 1/2/3 (or mode: explicit + sets: [...]) to target other cores'
+# partitions, or generate one config per core for a multi-core test.
+active_sets:
+  mode: partition
+  sets_per_partition: 16
+  core_id: 0
+
+priming:
+  enabled: true
+  associativity: 10
+  op_type: LOAD          # STORE | LOAD | random
+  load_prob: 0.5           # only used if op_type: random
+  comp_delay: 100
+  comp_delay_jitter: 15     # comp_delay is drawn from [100-15, 100+15] per op
+  chain_dependencies: true
+
+random_phase:
+  enabled: true
+  num_ops: 1000
+  addr_pool: primed          # region = tag varied freely within the chain's assigned sets
+                              # primed = reuse only (tag,set) pairs touched while priming, filtered to the chain's sets
+  tag_range: 64               # distinct tag values sampled from when addr_pool: region
+  load_prob: 1
+  comp_delay: 5000
+  comp_delay_jitter: 5000
+  priming_delay: 50000000
+  priming_delay_jitter: 0
+  parallel_start_width: 4
+  sets_per_chain: null        # null = split active_sets evenly (disjoint) across the 4 chains;
+                               # set to 1 to pin each chain to exactly one set, like the hand-written example
+  shuffle_set_partition: true
+  chain_dependencies: true
+  size: 64

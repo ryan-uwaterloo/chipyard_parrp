@@ -31,6 +31,7 @@ from matplotlib.patches import Patch
 
 from loaders import (
     build_paths,
+    build_paths_variants,
     load_miss_penalty,
     load_eviction_time_ctrl,
     load_eviction_time_parrp,
@@ -38,6 +39,7 @@ from loaders import (
     load_probe_latency,
     load_dram,
     load_reqtimes,
+    get_cores,
     CACHE_TYPES,
 )
 from violin_helpers import draw_violin_pair
@@ -79,7 +81,12 @@ METRIC_DEFS = {
         "ylabel": "Eviction Time (cycles)",
         "title":  "Eviction Time",
         "loader": lambda p, cfg, dirs: (
-            load_eviction_time_ctrl(p["rel_ctrl"], cfg["data_start"]),
+            load_eviction_time_parrp(
+                p["rel_ctrl"],
+                p["l1_ctrl"],
+                num_sets=cfg.get("num_sets", 64),
+                data_start=cfg["data_start"],
+            ),
             load_eviction_time_parrp(
                 p["rel_parrp"],
                 p["l1_parrp"],
@@ -115,9 +122,9 @@ METRIC_DEFS = {
     "reqtime_load": {
         "ylabel": "Request Time (cycles)",
         "title":  "LSU Load Request Time",
-        # Aggregates both data and inst caches, all cores
         "loader": lambda p, cfg, dirs: _load_reqtime_agg(
             cfg["test"], dirs["memreq"], "Load", ["data", "inst"],
+            num_cores=cfg.get("num_cores", 4),
         ),
     },
     "reqtime_store": {
@@ -126,6 +133,78 @@ METRIC_DEFS = {
         # Stores only come from data cache
         "loader": lambda p, cfg, dirs: _load_reqtime_agg(
             cfg["test"], dirs["memreq"], "Store", ["data"],
+            num_cores=cfg.get("num_cores", 4),
+        ),
+    },
+}
+
+ABLATION_METRIC_DEFS = {
+    "miss_penalty": {
+        "ylabel": "Miss Penalty (cycles)",
+        "title":  "Miss Penalty",
+        "loader": lambda p, cfg, dirs: (
+            load_miss_penalty(p["l1_a"], cfg["data_start"]),
+            load_miss_penalty(p["l1_b"], cfg["data_start"]),
+        ),
+    },
+    "eviction_time": {
+        "ylabel": "Eviction Time (cycles)",
+        "title":  "Eviction Time",
+        "loader": lambda p, cfg, dirs: (
+            load_eviction_time_parrp(
+                p["rel_a"], p["l1_a"],
+                num_sets=cfg.get("num_sets", 64),
+                data_start=cfg["data_start"],
+            ),
+            load_eviction_time_parrp(
+                p["rel_b"], p["l1_b"],
+                num_sets=cfg.get("num_sets", 64),
+                data_start=cfg["data_start"],
+            ),
+        ),
+    },
+    "llc_residual": {
+        "ylabel": "SourceD-to-Complete (cycles)",
+        "title":  "LLC Release Residual",
+        "loader": lambda p, cfg, dirs: (
+            load_llc_residual(p["llc_a"], cfg["data_start"]),
+            load_llc_residual(p["llc_b"], cfg["data_start"]),
+        ),
+    },
+    "probe_latency": {
+        "ylabel": "Probe Latency (cycles)",
+        "title":  "Probe Latency",
+        "loader": lambda p, cfg, dirs: (
+            load_probe_latency(p["probe_a"], cfg["data_start"]),
+            load_probe_latency(p["probe_b"], cfg["data_start"]),
+        ),
+    },
+    "dram": {
+        "ylabel": "DRAM Access Time (cycles)",
+        "title":  "DRAM Access Time",
+        "loader": lambda p, cfg, dirs: (
+            load_dram(p["dram_a"], cfg["data_start"]),
+            load_dram(p["dram_b"], cfg["data_start"]),
+        ),
+    },
+    "reqtime_load": {
+        "ylabel": "Request Time (cycles)",
+        "title":  "LSU Load Request Time",
+        "loader": lambda p, cfg, dirs: _load_reqtime_agg_variants(
+            cfg["test"], cfg["variant_a"], cfg["variant_b"], dirs["memreq"],
+            "Load", ["data", "inst"],
+            num_cores=cfg.get("num_cores", 4),
+            cores=cfg.get("cores"),
+        ),
+    },
+    "reqtime_store": {
+        "ylabel": "Request Time (cycles)",
+        "title":  "LSU Store Request Time",
+        "loader": lambda p, cfg, dirs: _load_reqtime_agg_variants(
+            cfg["test"], cfg["variant_a"], cfg["variant_b"], dirs["memreq"],
+            "Store", ["data"],
+            num_cores=cfg.get("num_cores", 4),
+            cores=cfg.get("cores"),
         ),
     },
 }
@@ -133,13 +212,13 @@ METRIC_DEFS = {
 # Default display order — reqtimes first, then cache-hierarchy metrics.
 # Override per test with cfg["order"] (list of metric keys).
 DEFAULT_METRIC_ORDER = [
-    "reqtime_load",
-    "reqtime_store",
-    "miss_penalty",
-    "eviction_time",
-    "llc_residual",
-    "probe_latency",
-    "dram",
+    "reqtime_load", # LSU LOAD -> GrantData(SourceD)
+    "reqtime_store", # LSU STORE -> ClaimMSHR
+    "miss_penalty", # ClaimMSHR -> GrantData(SourceD)
+    "eviction_time", # Release[Data] (SourceC) -> ReleaseAck (SinkD)
+    "llc_residual", # GrantData(SourceD) -> Directory Write
+    "probe_latency", # Arb_for_SourceB -> ProbeAck[Data]
+    "dram", # Acquire(SourceA) -> GrantData(SinkD)
 ]
 
 
@@ -148,14 +227,16 @@ def _load_reqtime_agg(
     memreq_dir: str,
     node_type: str,
     cache_types: list[str],
+    num_cores: int = 4,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Aggregate reqtime across cache_types for stock and mod variants."""
+    cores = get_cores(num_cores)
+
     parts_stock: list[np.ndarray] = []
     parts_mod:   list[np.ndarray] = []
 
     for ct in cache_types:
-        stock = load_reqtimes(f"{test}-ctrl",  ct, memreq_dir)[node_type]
-        mod   = load_reqtimes(f"{test}-parrp", ct, memreq_dir)[node_type]
+        stock = load_reqtimes(f"{test}-ctrl",  ct, memreq_dir, cores=cores)[node_type]
+        mod   = load_reqtimes(f"{test}-parrp-wb", ct, memreq_dir, cores=cores)[node_type]
         if len(stock):
             parts_stock.append(stock)
         if len(mod):
@@ -165,6 +246,33 @@ def _load_reqtime_agg(
     arr_mod   = np.concatenate(parts_mod)   if parts_mod   else np.array([], dtype=np.float32)
     return arr_stock, arr_mod
 
+def _load_reqtime_agg_variants(
+    test: str,
+    variant_a: str,
+    variant_b: str,
+    memreq_dir: str,
+    node_type: str,
+    cache_types: list[str],
+    num_cores: int = 4,
+    cores: list[int] | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    if cores is None:
+        cores = get_cores(num_cores)
+
+    parts_a: list[np.ndarray] = []
+    parts_b: list[np.ndarray] = []
+
+    for ct in cache_types:
+        a = load_reqtimes(f"{test}-{variant_a}", ct, memreq_dir, cores=cores)[node_type]
+        b = load_reqtimes(f"{test}-{variant_b}", ct, memreq_dir, cores=cores)[node_type]
+        if len(a):
+            parts_a.append(a)
+        if len(b):
+            parts_b.append(b)
+
+    arr_a = np.concatenate(parts_a) if parts_a else np.array([], dtype=np.float32)
+    arr_b = np.concatenate(parts_b) if parts_b else np.array([], dtype=np.float32)
+    return arr_a, arr_b
 
 # ============================================================
 # Per-test configuration
@@ -194,14 +302,15 @@ TEST_CONFIGS = [
     {
         "test":  "probe-4",
         "label": "Probe",
+        # "order": ["probe_latency", "miss_penalty"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  False,
             "llc_residual":   False,
             "probe_latency":  True,
-            "dram":           False,
-            "reqtime_load":   False,
-            "reqtime_store":  False,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
         },
         # "output": "probe-4.svg",   # uncomment to override default
         # "num_sets": 64,
@@ -210,39 +319,42 @@ TEST_CONFIGS = [
         "test":  "relbuf-4",
         "label": "RelBuf",
         "data_start": 50_000,
+        "order": ["eviction_time", "miss_penalty", "reqtime_store", "dram"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
-            "llc_residual":   True,
-            "probe_latency":  True,
+            "llc_residual":   False,
+            "probe_latency":  False,
             "dram":           True,
             "reqtime_load":   False,
             "reqtime_store":  True,
         },
     },
-    # {
-    #     "test":  "mempressure-4",
-    #     "label": "MemPressure",
-    #     "data_start": 100_000,
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   True,
-    #         "probe_latency":  True,
-    #         "dram":           True,
-    #         "reqtime_load":   False,
-    #         "reqtime_store":  True,
-    #     },
-    # },
+    {
+        "test":  "mempressure-4",
+        "label": "MemPressure",
+        "data_start": 200_000,
+        "order": ["dram", "miss_penalty", "eviction_time", "reqtime_load"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   False,
+            "probe_latency":  False,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  False,
+        },
+    },
     {
         "test":  "nmshrs-4",
         "label": "nMSHRs",
+        # "order": ["reqtime_load", "miss_penalty", "dram"]
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  False,
             "llc_residual":   False,
             "probe_latency":  False,
-            "dram":           False,
+            "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  False,
         },
@@ -250,16 +362,31 @@ TEST_CONFIGS = [
     {
         "test":  "hol-4",
         "label": "HoL",
+        "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
             "llc_residual":   True,
             "probe_latency":  True,
-            "dram":           False,
+            "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
         },
     },
+    # {
+    #     "test":  "hol-8",
+    #     "label": "HoL 8",
+    #     "num_cores": 8,
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   True,
+    #         "probe_latency":  True,
+    #         "dram":           False,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  True,
+    #     },
+    # },
     # ---- Template for a new test ------------------------------------
     # {
     #     "test":       "my-test-4",
@@ -276,6 +403,59 @@ TEST_CONFIGS = [
     #         "reqtime_store":  True,
     #     },
     # },
+]
+
+ABLATION_CONFIGS = [
+    {
+        "test":   "nmshrs-4",
+        "label":  "nMSHRs Ablation",
+        "output": "nmshrs-ablation.svg",
+        "variant_a": "ctrl-stock-mshrs",
+        "variant_b": "ctrl-20-mshrs",
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   False,
+            "probe_latency":  False,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  False,
+        },
+    },
+    {
+        "test":   "mempressure-4",
+        "label":  "DRAM Arbitration Ablation",
+        "output": "mempressure-ablation.svg",
+        "variant_a": "parrp-wb-splitprio",
+        "variant_b": "parrp-wb",
+        "data_start": 200_000,
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   False,
+            "probe_latency":  False,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+        },
+    },
+    {
+        "test":   "mshrs-gen-4",
+        "label":  "nMSHRs Ablation",
+        "output": "nmshrs-ablation-gen.svg",
+        "variant_a": "ctrl-stock-mshrs",
+        "variant_b": "ctrl-20-mshrs",
+        "cores": [0],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   False,
+            "probe_latency":  False,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  False,
+        },
+    },
 ]
 
 
@@ -365,16 +545,92 @@ def plot_one_test(cfg: dict, dirs: dict) -> None:
     plt.close(fig)
     print(f"  Saved → {output}")
 
+def plot_ablation_test(cfg: dict, dirs: dict) -> None:
+    test          = cfg["test"]
+    variant_a     = cfg["variant_a"]
+    variant_b     = cfg["variant_b"]
+    label         = cfg["label"]
+    metrics       = cfg["metrics"]
+    output        = cfg.get("output", f"{test}-ablation.svg")
+    legend_labels = cfg.get("legend_labels", (variant_a, variant_b))
+
+    from loaders import DEFAULT_DATA_START
+    data_start = cfg.get("data_start", DEFAULT_DATA_START)
+
+    order  = cfg.get("order", DEFAULT_METRIC_ORDER)
+    active = [m for m in order if metrics.get(m, False)]
+    if not active:
+        print(f"  [skip] {test}: no metrics enabled")
+        return
+
+    paths = build_paths_variants(test, variant_a, variant_b, dirs["data"])
+
+    print(f"\n{'='*60}")
+    print(f"  Ablation   : {label}  ({variant_a} vs {variant_b})")
+    print(f"  data_start : {data_start}")
+    print(f"  Metrics    : {', '.join(active)}")
+    print(f"{'='*60}")
+
+    data: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for metric in active:
+        mdef = ABLATION_METRIC_DEFS[metric]
+        print(f"  Loading {metric} …")
+        data[metric] = mdef["loader"](
+            paths, {**cfg, "test": test, "data_start": data_start}, dirs
+        )
+
+    n = len(active)
+    x = np.arange(1, n + 1)
+    fig, ax = plt.subplots(figsize=(1.1 * n + 0.6, 2.5))
+
+    for i, metric in enumerate(active):
+        arr_a, arr_b = data[metric]
+        draw_violin_pair(ax, arr_a, arr_b, x_pos=x[i])
+
+    def _wrap(text, max_chars=12):
+        if len(text) <= max_chars:
+            return text
+        mid = text.rfind(" ", 0, max_chars + 1)
+        if mid == -1:
+            mid = text.find(" ")
+        if mid == -1:
+            return text
+        return text[:mid] + "\n" + text[mid + 1:]
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(
+        [_wrap(ABLATION_METRIC_DEFS[m]["title"]) for m in active],
+        rotation=0, ha="center", fontsize=7,
+    )
+    ax.set_ylabel("Cycles")
+    ax.set_title(label)
+    ax.set_xlim(0.5, n + 0.5)
+    ax.grid(axis="y", linestyle="--", linewidth=0.5)
+
+    legend_elements = [
+        Patch(facecolor="white", edgecolor="red",  hatch="////////", label=legend_labels[0]),
+        Patch(facecolor="white", edgecolor="blue", hatch="xxxxxxxx", label=legend_labels[1]),
+    ]
+    ax.legend(handles=legend_elements, fontsize=6)
+
+    plt.tight_layout()
+    plt.savefig(output)
+    plt.close(fig)
+    print(f"  Saved → {output}")
+
 
 # ============================================================
 # Main
 # ============================================================
 
 def main():
-    assert TEST_CONFIGS, "TEST_CONFIGS is empty — nothing to plot."
+    assert TEST_CONFIGS or ABLATION_CONFIGS, "Nothing to plot."
 
     for cfg in TEST_CONFIGS:
         plot_one_test(cfg, DIRECTORIES)
+
+    for cfg in ABLATION_CONFIGS:
+        plot_ablation_test(cfg, DIRECTORIES)
 
     print("\nDone.")
 

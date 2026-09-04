@@ -9,6 +9,7 @@ reqtime).  Callers decide which arrays to plot.
 """
 
 import os
+import csv
 from pathlib import Path
 
 import numpy as np
@@ -19,11 +20,23 @@ import pandas as pd
 # ============================================================
 
 CHUNK_SIZE         = 5_000_000
-DEFAULT_DATA_START = 50_000       # warm-up cutoff (cycles) - override per test via cfg["data_start"]
+DEFAULT_DATA_START = 50_000
 ACQUIRE_OPCODES    = {"AcquireBlock", "AcquirePerm"}
-RELEASE_OPCODES = {"Release", "ReleaseData"}
-CACHE_TYPES     = ["data", "inst"]
-CORES           = [0, 1, 2, 3]
+RELEASE_OPCODES    = {"Release", "ReleaseData"}
+CACHE_TYPES        = ["data", "inst"]
+
+# Default core lists — override per-test via cfg["num_cores"]
+CORES_4 = [0, 1, 2, 3]
+CORES_8 = [0, 1, 2, 3, 4, 5, 6, 7]
+
+def get_cores(num_cores: int = 4) -> list[int]:
+    """Return the list of core indices for a given core count."""
+    if num_cores == 4:
+        return CORES_4
+    if num_cores == 8:
+        return CORES_8
+    # Generic fallback for any count
+    return list(range(num_cores))
 
 # ============================================================
 # Static SourceID → (core, cache_type) map  (from script 2)
@@ -83,15 +96,15 @@ def build_paths(test: str, data_dir: str) -> dict[str, str]:
     d = data_dir
     return {
         "l1_ctrl":     f"{d}/{test}-l1-ctrl.csv",
-        "l1_parrp":    f"{d}/{test}-l1-parrp.csv",
+        "l1_parrp":    f"{d}/{test}-l1-parrp-wb.csv",
         "rel_ctrl":    f"{d}/{test}-l1-ctrl_releases.csv",
-        "rel_parrp":   f"{d}/{test}-l1-parrp_releases.csv",
+        "rel_parrp":   f"{d}/{test}-l1-parrp-wb_releases.csv",
         "llc_ctrl":    f"{d}/{test}-ctrl.csv",
-        "llc_parrp":   f"{d}/{test}-parrp.csv",
+        "llc_parrp":   f"{d}/{test}-parrp-wb.csv",
         "probe_ctrl":  f"{d}/{test}-ctrl-probes.csv",
-        "probe_parrp": f"{d}/{test}-parrp-probes.csv",
+        "probe_parrp": f"{d}/{test}-parrp-wb-probes.csv",
         "dram_ctrl":   f"{d}/{test}-ctrl-dram.csv",
-        "dram_parrp":  f"{d}/{test}-parrp-dram.csv",
+        "dram_parrp":  f"{d}/{test}-parrp-wb-dram.csv",
     }
 
 
@@ -100,7 +113,7 @@ def build_paths_iso_int(base: str, data_dir: str) -> dict[str, dict[str, str]]:
     Return paths for an isolation/interference test pair.
 
     The filename convention is:
-        inter-{iso|int}-{base}-{ctrl|parrp}.csv   (and derivative suffixes)
+        inter-{iso|int}-{base}-{ctrl|parrp-wb}.csv   (and derivative suffixes)
 
     Parameters
     ----------
@@ -119,6 +132,25 @@ def build_paths_iso_int(base: str, data_dir: str) -> dict[str, dict[str, str]]:
         for condition in ("iso", "int")
     }
 
+def build_paths_variants(test: str, variant_a: str, variant_b: str, data_dir: str) -> dict[str, str]:
+    """
+    Like build_paths(), but for two independently-named variants instead of
+    the built-in ctrl/parrp-wb pair. Useful for ablations that compare two
+    stock-side configs against each other (e.g. MSHR count sweeps).
+    """
+    d = data_dir
+    return {
+        "l1_a":     f"{d}/{test}-l1-{variant_a}.csv",
+        "l1_b":     f"{d}/{test}-l1-{variant_b}.csv",
+        "rel_a":    f"{d}/{test}-l1-{variant_a}_releases.csv",
+        "rel_b":    f"{d}/{test}-l1-{variant_b}_releases.csv",
+        "llc_a":    f"{d}/{test}-{variant_a}.csv",
+        "llc_b":    f"{d}/{test}-{variant_b}.csv",
+        "probe_a":  f"{d}/{test}-{variant_a}-probes.csv",
+        "probe_b":  f"{d}/{test}-{variant_b}-probes.csv",
+        "dram_a":   f"{d}/{test}-{variant_a}-dram.csv",
+        "dram_b":   f"{d}/{test}-{variant_b}-dram.csv",
+    }
 
 def reqtime_csv_path(test_variant: str, core: int, cache_type: str,
                      memreq_dir: str) -> Path:
@@ -175,6 +207,7 @@ def load_eviction_time_parrp(
     l1_filepath: str,
     num_sets: int = 64,
     data_start: int = DEFAULT_DATA_START,
+    output_path: str | None = None,
 ) -> np.ndarray:
     """
     Modified (parrp) eviction time: computed by matching each release cycle
@@ -182,6 +215,11 @@ def load_eviction_time_parrp(
     to the interval's end - 3 cycles.
 
     `num_sets` must be a power of 2 (64 or 128 depending on the test).
+
+    If `output_path` is given (or left as the default derived from
+    `release_filepath`), also writes a CSV with columns
+    Address, Core, StartCycle, EvictionTime for every matched entry —
+    written chunk-by-chunk so it's safe on very large traces.
     """
     assert (num_sets & (num_sets - 1)) == 0, \
         f"num_sets must be a power of 2, got {num_sets}"
@@ -189,6 +227,12 @@ def load_eviction_time_parrp(
     def index_bits(addr_series):
         ints = np.array([int(x, 16) for x in addr_series], dtype=np.int64)
         return ((ints >> 6) & (num_sets - 1)).astype(np.int32)
+
+    if output_path is None:
+        output_path = f"../parsed/parrp_evict/parrp-{os.path.basename(release_filepath)}"
+    out_dir = os.path.dirname(output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
 
     # Load all L1 intervals once
     l1 = pd.read_csv(
@@ -206,33 +250,45 @@ def load_eviction_time_parrp(
     )
 
     results = []
-    for chunk in pd.read_csv(
-        release_filepath,
-        usecols=["Address", "Core", "StartCycle"],
-        chunksize=CHUNK_SIZE,
-    ):
-        chunk = chunk[chunk["StartCycle"] >= data_start].copy()
-        chunk["Core"]      = chunk["Core"].str.lower()
-        chunk["IndexBits"] = index_bits(chunk["Address"])
+    with open(output_path, "w", newline="") as fout:
+        writer = csv.writer(fout)
+        writer.writerow(["Address", "Core", "StartCycle", "EvictionTime"])
 
-        eviction_times = []
-        for (core, idx_bits), rel_group in chunk.groupby(["Core", "IndexBits"]):
-            l1_group = l1[(l1["Core"] == core) & (l1["IndexBits"] == idx_bits)]
-            if l1_group.empty:
-                continue
+        for chunk in pd.read_csv(
+            release_filepath,
+            usecols=["Address", "Core", "StartCycle"],
+            chunksize=CHUNK_SIZE,
+        ):
+            chunk = chunk[chunk["StartCycle"] >= data_start].copy()
+            chunk["Core"]      = chunk["Core"].str.lower()
+            chunk["IndexBits"] = index_bits(chunk["Address"])
 
-            starts  = l1_group["l1_start"].to_numpy()
-            ends    = l1_group["l1_end"].to_numpy()
-            targets = l1_group["TargetCycle"].to_numpy()
-            rel_cyc = rel_group["StartCycle"].to_numpy()
+            eviction_times = []
+            out_rows = []
+            for (core, idx_bits), rel_group in chunk.groupby(["Core", "IndexBits"]):
+                l1_group = l1[(l1["Core"] == core) & (l1["IndexBits"] == idx_bits)]
+                if l1_group.empty:
+                    continue
 
-            pos = np.searchsorted(starts, rel_cyc, side="right") - 1
-            for cycle, p in zip(rel_cyc, pos):
-                if p >= 0 and starts[p] <= cycle <= ends[p]:
-                    eviction_times.append(targets[p] - cycle)
+                starts   = l1_group["l1_start"].to_numpy()
+                ends     = l1_group["l1_end"].to_numpy()
+                targets  = l1_group["TargetCycle"].to_numpy()
+                rel_cyc  = rel_group["StartCycle"].to_numpy()
+                rel_addr = rel_group["Address"].to_numpy()
 
-        if eviction_times:
-            results.append(np.array(eviction_times, dtype=np.int32))
+                pos = np.searchsorted(starts, rel_cyc, side="right") - 1
+                for cycle, addr, p in zip(rel_cyc, rel_addr, pos):
+                    if p >= 0 and starts[p] <= cycle <= ends[p]:
+                        ev_time = int(targets[p] - cycle)
+                        eviction_times.append(ev_time)
+                        out_rows.append((addr, core, int(cycle), ev_time))
+
+            if out_rows:
+                writer.writerows(out_rows)
+            if eviction_times:
+                results.append(np.array(eviction_times, dtype=np.int32))
+
+    print(f"Eviction-time detail written to {output_path}")
 
     return np.concatenate(results) if results else np.array([], dtype=np.int32)
 
@@ -303,6 +359,7 @@ def load_reqtimes(
     test_variant: str,
     cache_type: str,
     memreq_dir: str,
+    cores: list[int] | None = None,          # ← new
 ) -> dict[str, np.ndarray]:
     """
     Aggregate request-time values across all cores for a test variant
@@ -312,11 +369,15 @@ def load_reqtimes(
     -------
     {"Load": np.ndarray, "Store": np.ndarray}
     """
+    if cores is None:
+        cores = CORES_4                       # preserve old default
+
     accum: dict[str, list[np.ndarray]] = {"Load": [], "Store": []}
 
-    for core in CORES:
+    for core in cores:
         path = reqtime_csv_path(test_variant, core, cache_type, memreq_dir)
         if not path.exists() or os.path.getsize(path) == 0:
+            print(f"  [WARN] missing/empty: {path}")
             continue
         print(f"  Reading {path.name} …")
         for chunk in pd.read_csv(
