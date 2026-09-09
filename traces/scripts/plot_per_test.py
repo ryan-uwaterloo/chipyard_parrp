@@ -373,6 +373,20 @@ TEST_CONFIGS = [
             "reqtime_store":  True,
         },
     },
+    {
+        "test":  "hol-8",
+        "label": "HoL 8",
+        "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+        },
+    },
     # {
     #     "test":  "hol-8",
     #     "label": "HoL 8",
@@ -445,7 +459,7 @@ ABLATION_CONFIGS = [
         "output": "nmshrs-ablation-gen.svg",
         "variant_a": "ctrl-stock-mshrs",
         "variant_b": "ctrl-20-mshrs",
-        "cores": [0],
+        "cores": [0], # only affects LSU metrics
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,

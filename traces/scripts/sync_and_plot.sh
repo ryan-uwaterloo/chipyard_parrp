@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for t in inter-iso inter-int hol probe nmshrs relbuf; do
+for t in inter-iso inter-int hol probe nmshrs relbuf mempressure; do
     sftp rpsrvr1 <<EOF
 lcd ../parsed/synthetics
 cd work/chipyard/traces/parsed/synthetics

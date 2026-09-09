@@ -3,8 +3,8 @@
 # exactly once -- override cache.tag_stride explicitly if your address map
 # differs.
 
-seed: 42
-base_addr: 0x30000000
+seed: 48
+base_addr: 0x20000000
 
 cache:
   line_size_bytes: 64
@@ -16,8 +16,8 @@ cache:
 # partitions, or generate one config per core for a multi-core test.
 active_sets:
   mode: partition
-  sets_per_partition: 16
-  core_id: 2
+  sets_per_partition: 8
+  core_id: 1
 
 priming:
   enabled: true
