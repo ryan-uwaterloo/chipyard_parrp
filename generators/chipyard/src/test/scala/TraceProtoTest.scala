@@ -542,11 +542,11 @@ it should "Synthetic-mshrs-gen-4" in {
 it should "Synthetic-relbuf-gen-8" in {
   runTraceTest(
     testFolder = "test_cases/tracegen_relbuf",
-    testName = "mshrs-gen-8",
+    testName = "relbuf-gen-8",
     numTiles = 8,
     l2ways = 80,
     fromCsv = true,
-    traceVCD = false
+    traceVCD = true
   )
 }
 }
