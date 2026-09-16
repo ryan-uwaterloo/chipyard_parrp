@@ -550,6 +550,16 @@ it should "Synthetic-probe-gen-4" in {
   )
 }
 
+it should "Synthetic-hol-gen-4" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_hol",
+    testName = "hol-gen-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false,
+  )
+}
+
 it should "Synthetic-relbuf-gen-8" in {
   runTraceTest(
     testFolder = "test_cases/tracegen_relbuf",
