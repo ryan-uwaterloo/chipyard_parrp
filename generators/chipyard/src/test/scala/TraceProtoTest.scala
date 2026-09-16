@@ -535,7 +535,18 @@ it should "Synthetic-mshrs-gen-4" in {
     testName = "mshrs-gen-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = true
+    traceVCD = true,
+    testStartCycle = 200000
+  )
+}
+
+it should "Synthetic-probe-gen-4" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_probe",
+    testName = "probe-gen-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false,
   )
 }
 
