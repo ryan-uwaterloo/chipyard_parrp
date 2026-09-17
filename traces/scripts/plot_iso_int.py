@@ -126,10 +126,10 @@ def _reqtime_loader(node_type: str, cache_types: list[str]):
                 cache_types,
             )
             for role, condition, variant in [
-                ("iso_ctrl",  "iso", "ctrl"),
-                ("int_ctrl",  "int", "ctrl"),
-                ("iso_parrp", "iso", "parrp-wb"),
-                ("int_parrp", "int", "parrp-wb"),
+                ("iso_ctrl",  "iso-gen", "ctrl"),
+                ("int_ctrl",  "int-gen", "ctrl"),
+                ("iso_parrp", "iso-gen", "parrp-wb"),
+                ("int_parrp", "int-gen", "parrp-wb"),
             ]
         }
     return _loader

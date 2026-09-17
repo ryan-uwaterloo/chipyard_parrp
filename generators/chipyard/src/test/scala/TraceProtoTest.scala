@@ -509,6 +509,17 @@ it should "Synthetic-mempressure-4" in {
   )
 }
 
+it should "Synthetic-mempressure-gen-4" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_mempressure",
+    testName = "mempressure-gen-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = false,
+    testStartCycle = 200000
+  )
+}
+
 it should "Synthetic-inter-int-4" in {
   runTraceTest(
     testFolder = "test_cases/interference_test_int",
