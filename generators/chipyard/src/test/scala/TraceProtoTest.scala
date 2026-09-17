@@ -529,6 +529,28 @@ it should "Synthetic-inter-iso-4" in {
   )
 }
 
+it should "Synthetic-inter-int-gen-4" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_int",
+    testName = "inter-int-gen-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = true,
+    testStartCycle = 200000
+  )
+}
+
+it should "Synthetic-inter-iso-gen-4" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_iso",
+    testName = "inter-iso-gen-4",
+    numTiles = 4,
+    fromCsv = true,
+    traceVCD = true,
+    testStartCycle = 200000
+  )
+}
+
 it should "Synthetic-mshrs-gen-4" in {
   runTraceTest(
     testFolder = "test_cases/tracegen_mshrs",

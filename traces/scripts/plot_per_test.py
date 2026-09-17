@@ -316,6 +316,22 @@ TEST_CONFIGS = [
         # "num_sets": 64,
     },
     {
+        "test":  "probe-gen-4",
+        "label": "Probe",
+        # "order": ["probe_latency", "miss_penalty"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  False,
+            "llc_residual":   False,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+        },
+        # "output": "probe-4.svg",   # uncomment to override default
+        # "num_sets": 64,
+    },
+    {
         "test":  "relbuf-4",
         "label": "RelBuf",
         "data_start": 50_000,
@@ -374,9 +390,37 @@ TEST_CONFIGS = [
         },
     },
     {
+        "test":  "hol-gen-4",
+        "label": "HoL",
+        "order": ["probe_latency", "miss_penalty", "eviction_time", "dram", "reqtime_load"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+        },
+    },
+    {
         "test":  "hol-8",
         "label": "HoL 8",
         "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+        },
+    },
+    {
+        "test":  "relbuf-gen-8",
+        "label": "Release 8",
+        "order": ["reqtime_store", "miss_penalty", "eviction_time"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -460,6 +504,7 @@ ABLATION_CONFIGS = [
         "variant_a": "ctrl-stock-mshrs",
         "variant_b": "ctrl-20-mshrs",
         "cores": [0], # only affects LSU metrics
+        "data_start": 200_000,
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
