@@ -515,7 +515,7 @@ it should "Synthetic-mempressure-gen-4" in {
     testName = "mempressure-gen-4",
     numTiles = 4,
     fromCsv = true,
-    traceVCD = false,
+    traceVCD = true,
     testStartCycle = 200000
   )
 }
