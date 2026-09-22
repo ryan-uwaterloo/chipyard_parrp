@@ -251,7 +251,7 @@ ISO_INT_CONFIGS = [
         "base":  "4",
         "label": "Isolation vs Interference",
         "metrics": {
-            "miss_penalty":   True,
+            "miss_penalty":   False,
             "eviction_time":  False,
             "llc_residual":   False,
             "probe_latency":  False,

@@ -16,7 +16,8 @@ def addr_tag(addr):
 def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # Regex patterns
     sink_re = re.compile(
-        r"@ clk_cycle\s+(\d+): New Sink ([ACX]) Request! opcode:\s*(\w+).*source:\s*(0x[0-9a-fA-F]+)",
+        r"@ clk_cycle\s+(\d+): New Sink ([ACX]) Request! opcode:\s*(\w+)"
+        r"(?:.*?addr:\s*(0x[0-9a-fA-F]+))?.*source:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
     # Updated: now captures set and tag fields from the new log format
     meta_re = re.compile(
@@ -68,6 +69,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     # --- State maps ---
     sink_times = {}       # (source, opcode) -> start_cycle
+    sink_addrs = {}
     request_meta = {}     # source -> metadata dict
     last_completion = {}  # (source, opcode) -> last completion cycle
     last_source_d = {}    # (source, source_d_opcode) -> last Source D cycle seen
@@ -235,7 +237,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 cycle = int(m[1])
                 sink_type = m[2].upper()
                 opcode = m[3]
-                src = int(m[4], 16)
+                addr = int(m[4], 16) if m[4] else None
+                src = int(m[5], 16)
                 sink_key = (src, opcode)
 
                 last = last_completion.get(sink_key)
@@ -257,6 +260,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 # Record only first valid arrival for this (src, opcode)
                 if sink_key not in sink_times:
                     sink_times[sink_key] = cycle
+                    if addr is not None:
+                        sink_addrs[sink_key] = addr
                     if debug:
                         print(f"[line {line_no}] Sink {sink_type}: cycle={cycle}, opcode={opcode}, source=0x{src:X}")
                 else:
@@ -275,15 +280,20 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 evicting   = int(m[4])
                 back_inv   = int(m[5])
                 src        = int(m[6], 16)
-                mshr_set   = int(m[7], 16)   # bits [11:6] directly from the log
+                mshr_set   = int(m[7], 16)
                 tag        = int(m[8], 16)
 
                 # Look up the sink arrival time for this source so we can later
                 # compute SetBlockTime = MSHR_entry_cycle - sink_arrival_cycle.
                 # We search sink_times for any opcode matching this source because
                 # the MSHR line doesn't carry the opcode directly.
-                candidates = [t for (s, _op), t in sink_times.items() if s == src and t <= cycle]
-                sink_start = max(candidates) if candidates else None
+                candidates = [(t, op) for (s, op), t in sink_times.items() if s == src and t <= cycle]
+                if candidates:
+                    sink_start, matched_op = max(candidates, key=lambda x: x[0])
+                    address = sink_addrs.get((src, matched_op))
+                else:
+                    sink_start = None
+                    address = None
 
                 request_meta[src] = {
                     "need_dram":  dram,
@@ -293,7 +303,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     "meta_cycle": cycle,
                     "set":        mshr_set,
                     "tag":        tag,
-                    "sink_start": sink_start,  # None if MSHR somehow precedes sink (shouldn't happen)
+                    "sink_start": sink_start,
+                    "address":    address,          # NEW
                 }
 
                 if need_probe:
@@ -618,13 +629,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         with open(csv_out, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Latency",
-                             "SetBlockTime",
-                             "ReleaseStallCycles", "SourceDCycle", "SourceDToComplete",
-                             "NeedDRAM", "NeedProbe", "Evicting", "BackInv"])
+                 "SetBlockTime",
+                 "ReleaseStallCycles", "SourceDCycle", "SourceDToComplete",
+                 "NeedDRAM", "NeedProbe", "Evicting", "BackInv", "Address"])
             for src, opcode, start, end, lat, meta, stalls, source_d_cycle in results:
                 d_to_complete = (end - source_d_cycle) if source_d_cycle is not None else ""
                 meta_cycle  = meta.get('meta_cycle')
                 sink_start  = meta.get('sink_start')
+                address     = meta.get('address')
                 set_block_time = (meta_cycle - sink_start
                                   if meta_cycle is not None and sink_start is not None
                                   else "")
@@ -636,6 +648,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     d_to_complete,
                     meta.get('need_dram',''), meta.get('need_probe',''),
                     meta.get('evicting',''), meta.get('back_inv',''),
+                    f"0x{address:X}" if address is not None else "",
                 ])
         print(f"\n Results with metadata written to {csv_out}")
 

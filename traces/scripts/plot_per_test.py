@@ -318,7 +318,7 @@ TEST_CONFIGS = [
     {
         "test":  "probe-gen-4",
         "label": "Probe",
-        # "order": ["probe_latency", "miss_penalty"],
+        "order": ["probe_latency", "miss_penalty"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  False,
@@ -392,7 +392,7 @@ TEST_CONFIGS = [
     {
         "test":  "hol-gen-4",
         "label": "HoL",
-        "order": ["probe_latency", "miss_penalty", "eviction_time", "dram", "reqtime_load"],
+        "order": ["eviction_time", "probe_latency", "miss_penalty"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -420,7 +420,7 @@ TEST_CONFIGS = [
     {
         "test":  "relbuf-gen-8",
         "label": "Release 8",
-        "order": ["reqtime_store", "miss_penalty", "eviction_time"],
+        "order": ["eviction_time", "miss_penalty", "reqtime_store"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -432,17 +432,18 @@ TEST_CONFIGS = [
         },
     },
     # {
-    #     "test":  "hol-8",
-    #     "label": "HoL 8",
-    #     "num_cores": 8,
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   True,
-    #         "probe_latency":  True,
-    #         "dram":           False,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  True,
+    #     "test":  "hol-4",
+    #     "label": "HoL",
+    #     "order": [...],
+    #     "metrics": {...},
+    #     "facet_by": {
+    #         "miss_penalty": [
+    #             {"cores": [0, 1], "flags": ["NeedDRAM", "BackInv"], "label": "C0-1\nDRAM+BackInv"},
+    #             {"cores": [2, 3], "flags": ["NeedDRAM"],            "label": "C2-3\nDRAM"},
+    #         ],
+    #         "probe_latency": [
+    #             {"cores": [0], "flags": ["Evicting"], "label": "C0\nEvicting"},
+    #         ],
     #     },
     # },
     # ---- Template for a new test ------------------------------------
@@ -498,6 +499,23 @@ ABLATION_CONFIGS = [
         },
     },
     {
+        "test":   "mempressure-gen-4",
+        "label":  "DRAM Arbitration Ablation",
+        "output": "mempressure-ablation-gen.svg",
+        "variant_a": "parrp-wb-splitprio",
+        "variant_b": "parrp-wb",
+        "data_start": 200_000,
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   False,
+            "probe_latency":  False,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+        },
+    },
+    {
         "test":   "mshrs-gen-4",
         "label":  "nMSHRs Ablation",
         "output": "nmshrs-ablation-gen.svg",
@@ -505,6 +523,7 @@ ABLATION_CONFIGS = [
         "variant_b": "ctrl-20-mshrs",
         "cores": [0], # only affects LSU metrics
         "data_start": 200_000,
+        "order": ["miss_penalty", "reqtime_load", "dram"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -537,12 +556,14 @@ def plot_one_test(cfg: dict, dirs: dict) -> None:
     label   = cfg["label"]
     metrics = cfg["metrics"]
     output  = cfg.get("output", f"{test}.svg")
+    facet_by = cfg.get("facet_by", {})
 
-    # Resolve data_start: per-test override, or module default
-    from loaders import DEFAULT_DATA_START
+    from loaders import (
+        DEFAULT_DATA_START,
+        load_miss_penalty_faceted, load_probe_latency_faceted,
+    )
     data_start = cfg.get("data_start", DEFAULT_DATA_START)
 
-    # Resolve metric order: per-test override or default (reqtimes first)
     order  = cfg.get("order", DEFAULT_METRIC_ORDER)
     active = [m for m in order if metrics.get(m, False)]
     if not active:
@@ -557,42 +578,59 @@ def plot_one_test(cfg: dict, dirs: dict) -> None:
     print(f"  Metrics    : {', '.join(active)}")
     print(f"{'='*60}")
 
-    # ---- Load data for each active metric ---------------------------
-    data: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    # ---- Build ordered slot list: (title, stock_arr, mod_arr) ----------
+    slots: list[tuple[str, np.ndarray, np.ndarray]] = []
+
     for metric in active:
-        mdef = METRIC_DEFS[metric]
-        print(f"  Loading {metric} …")
-        data[metric] = mdef["loader"](
-            paths, {**cfg, "test": test, "data_start": data_start}, dirs
-        )
+        if metric in facet_by:
+            groups = facet_by[metric]
+            print(f"  Loading {metric} (faceted, {len(groups)} groups) …")
+            if metric == "miss_penalty":
+                faceted = load_miss_penalty_faceted(
+                    paths["l1_ctrl"], paths["l1_parrp"],
+                    paths["llc_ctrl"], paths["llc_parrp"],
+                    groups, data_start=data_start, label=test,
+                )
+            elif metric == "probe_latency":
+                faceted = load_probe_latency_faceted(
+                    paths["probe_ctrl"], paths["probe_parrp"],
+                    paths["llc_ctrl"], paths["llc_parrp"],
+                    groups, data_start=data_start, label=test,
+                )
+            else:
+                raise NotImplementedError(f"facet_by not wired up for '{metric}' yet")
+            slots.extend(faceted)
+        else:
+            mdef = METRIC_DEFS[metric]
+            print(f"  Loading {metric} …")
+            stock_arr, mod_arr = mdef["loader"](
+                paths, {**cfg, "test": test, "data_start": data_start}, dirs
+            )
+            slots.append((mdef["title"], stock_arr, mod_arr))
 
-    # ---- Single figure, single axis ---------------------------------
-    n   = len(active)
-    x   = np.arange(1, n + 1)
+    if not slots:
+        print(f"  [skip] {test}: no data slots produced")
+        return
 
-    # Narrow per-violin width; height stays fixed at 2.5 in
+    n = len(slots)
+    x = np.arange(1, n + 1)
     fig, ax = plt.subplots(figsize=(1.1 * n + 0.6, 2.5))
 
-    for i, metric in enumerate(active):
-        stock_arr, mod_arr = data[metric]
+    for i, (_, stock_arr, mod_arr) in enumerate(slots):
         draw_violin_pair(ax, stock_arr, mod_arr, x_pos=x[i])
 
-    # Wrap long titles onto two lines so labels stay horizontal
     def _wrap(text, max_chars=12):
         if len(text) <= max_chars:
             return text
         mid = text.rfind(" ", 0, max_chars + 1)
         if mid == -1:
-            mid = text.find(" ")   # no space before limit — use first space
+            mid = text.find(" ")
         if mid == -1:
-            return text            # single long word, leave as-is
+            return text
         return text[:mid] + "\n" + text[mid + 1:]
 
     ax.set_xticks(x)
-    ax.set_xticklabels(
-        [_wrap(METRIC_DEFS[m]["title"]) for m in active],
-        rotation=0, ha="center", fontsize=7,
-    )
+    ax.set_xticklabels([_wrap(t) for t, _, _ in slots], rotation=0, ha="center", fontsize=7)
     ax.set_ylabel("Cycles")
     ax.set_title(label)
     ax.set_xlim(0.5, n + 0.5)

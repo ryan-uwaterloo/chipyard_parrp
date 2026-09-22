@@ -464,3 +464,179 @@ def compute_hit_miss(
         rows,
         columns=["core", "cache_type", "misses", "total_requests", "hits", "hit_rate"],
     )
+
+# ============================================================
+# Address/Core normalization + state-join helpers
+# ============================================================
+
+FLAG_COLUMNS = ["NeedDRAM", "NeedProbe", "Evicting", "BackInv"]
+
+
+def normalize_hex(series: pd.Series) -> pd.Series:
+    """'0X40001C00', '0x3', '41' -> canonical int64. Handles mixed hex/decimal
+    by always treating as hex since every Address/Core/SourceID field in these
+    CSVs is written with an 0x/0X prefix."""
+    return series.astype(str).str.strip().apply(lambda s: int(s, 16)).astype(np.int64)
+
+
+def load_l1_miss_penalty_df(filepath: str, data_start: int = DEFAULT_DATA_START) -> pd.DataFrame:
+    """Full L1 miss rows (not just the MissPenalty array) — needed as the left
+    side of the state join."""
+    df = pd.read_csv(
+        filepath, usecols=["Address", "Core", "StartCycle", "EndCycle", "MissPenalty"]
+    )
+    df["MissPenalty"] = df["MissPenalty"].astype(np.uint16)
+    mask = (df["StartCycle"] >= data_start) & (df["MissPenalty"] >= 10)
+    return df.loc[mask].reset_index(drop=True)
+
+
+def load_llc_full_df(filepath: str) -> pd.DataFrame:
+    """Full LLC completion rows including the new Address column and state flags."""
+    return pd.read_csv(
+        filepath,
+        usecols=["Address", "SourceID", "Opcode", "StartCycle", "EndCycle"] + FLAG_COLUMNS,
+    )
+
+
+def load_probe_df(filepath: str, data_start: int = DEFAULT_DATA_START) -> pd.DataFrame:
+    df = pd.read_csv(filepath, usecols=["Set", "MSHRSource", "StartCycle", "EndCycle", "Latency"])
+    return df.loc[df["StartCycle"] >= data_start].reset_index(drop=True)
+
+
+def attach_state_miss_penalty(
+    l1_df: pd.DataFrame, llc_df: pd.DataFrame, label: str = ""
+) -> pd.DataFrame:
+    """Join each L1 miss row to the nearest LLC transaction for the same
+    (Address, Core) at or after the L1 request's StartCycle."""
+    l1 = l1_df.copy()
+    llc = llc_df.copy()
+
+    l1["Address"] = normalize_hex(l1["Address"])
+    l1["Core"] = normalize_hex(l1["Core"])
+    llc["Address"] = normalize_hex(llc["Address"])
+    llc["Core"] = normalize_hex(llc["SourceID"]).map(
+        lambda sid: SOURCE_ID_MAP.get(sid, (None, None))[0]
+    )
+    llc = llc.dropna(subset=["Core"]).copy()
+    llc["Core"] = llc["Core"].astype(np.int64)
+
+    l1 = l1.sort_values("StartCycle").reset_index(drop=True)
+    llc = llc.sort_values("StartCycle").reset_index(drop=True)
+
+    merged = pd.merge_asof(
+        l1, llc,
+        on="StartCycle",
+        by=["Address", "Core"],
+        direction="forward",
+        suffixes=("", "_llc"),
+    )
+
+    unmatched = merged["Opcode"].isna()
+    n_unmatched = int(unmatched.sum())
+    if n_unmatched:
+        print(
+            f"  [WARN] {label}: {n_unmatched}/{len(merged)} miss-penalty rows "
+            f"had no matching LLC transaction (dropped)"
+        )
+    return merged.loc[~unmatched].reset_index(drop=True)
+
+
+def attach_state_probe_latency(
+    probe_df: pd.DataFrame, llc_df: pd.DataFrame, label: str = ""
+) -> pd.DataFrame:
+    """Join each probe row to the LLC transaction (matched by SourceID ==
+    MSHRSource) whose cycle window contains the probe's StartCycle."""
+    probes = probe_df.copy()
+    llc = llc_df.copy()
+
+    probes["SourceID"] = normalize_hex(probes["MSHRSource"])
+    llc["SourceID"] = normalize_hex(llc["SourceID"])
+    probes["Core"] = probes["SourceID"].map(
+        lambda sid: SOURCE_ID_MAP.get(sid, (None, None))[0]
+    )
+
+    llc_sorted = llc.sort_values("StartCycle")
+    out_rows = []
+    n_unmatched = 0
+
+    for sid, grp in probes.groupby("SourceID"):
+        candidates = llc_sorted[llc_sorted["SourceID"] == sid]
+        if candidates.empty:
+            n_unmatched += len(grp)
+            continue
+        starts = candidates["StartCycle"].to_numpy()
+        ends = candidates["EndCycle"].to_numpy()
+        cand_records = candidates[["Opcode"] + FLAG_COLUMNS].to_dict("records")
+
+        for _, prow in grp.iterrows():
+            pos = np.searchsorted(starts, prow["StartCycle"], side="right") - 1
+            if pos >= 0 and starts[pos] <= prow["StartCycle"] <= ends[pos]:
+                out_rows.append({**prow.to_dict(), **cand_records[pos]})
+            else:
+                n_unmatched += 1
+
+    if n_unmatched:
+        print(
+            f"  [WARN] {label}: {n_unmatched}/{len(probes)} probe rows had no "
+            f"containing LLC transaction (dropped)"
+        )
+    return pd.DataFrame(out_rows)
+
+
+def apply_facet_group(df: pd.DataFrame, group: dict) -> pd.DataFrame:
+    """group = {"cores": [...], "flags": [...], "label": "..."}
+    flags entries matching FLAG_COLUMNS are AND'd as boolean filters;
+    anything else is matched against Opcode."""
+    mask = df["Core"].isin(group["cores"])
+    for flag in group["flags"]:
+        if flag in FLAG_COLUMNS:
+            mask &= df[flag].astype(bool)
+        else:
+            mask &= (df["Opcode"] == flag)
+    return df.loc[mask]
+
+
+def load_miss_penalty_faceted(
+    l1_ctrl_path: str, l1_mod_path: str,
+    llc_ctrl_path: str, llc_mod_path: str,
+    facet_groups: list[dict],
+    data_start: int = DEFAULT_DATA_START,
+    label: str = "",
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    l1_ctrl = load_l1_miss_penalty_df(l1_ctrl_path, data_start)
+    l1_mod = load_l1_miss_penalty_df(l1_mod_path, data_start)
+    llc_ctrl = load_llc_full_df(llc_ctrl_path)
+    llc_mod = load_llc_full_df(llc_mod_path)
+
+    joined_ctrl = attach_state_miss_penalty(l1_ctrl, llc_ctrl, label=f"{label}-ctrl")
+    joined_mod = attach_state_miss_penalty(l1_mod, llc_mod, label=f"{label}-mod")
+
+    results = []
+    for group in facet_groups:
+        stock = apply_facet_group(joined_ctrl, group)["MissPenalty"].to_numpy(dtype=np.uint16)
+        mod = apply_facet_group(joined_mod, group)["MissPenalty"].to_numpy(dtype=np.uint16)
+        results.append((group["label"], stock, mod))
+    return results
+
+
+def load_probe_latency_faceted(
+    probe_ctrl_path: str, probe_mod_path: str,
+    llc_ctrl_path: str, llc_mod_path: str,
+    facet_groups: list[dict],
+    data_start: int = DEFAULT_DATA_START,
+    label: str = "",
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    probe_ctrl = load_probe_df(probe_ctrl_path, data_start)
+    probe_mod = load_probe_df(probe_mod_path, data_start)
+    llc_ctrl = load_llc_full_df(llc_ctrl_path)
+    llc_mod = load_llc_full_df(llc_mod_path)
+
+    joined_ctrl = attach_state_probe_latency(probe_ctrl, llc_ctrl, label=f"{label}-ctrl")
+    joined_mod = attach_state_probe_latency(probe_mod, llc_mod, label=f"{label}-mod")
+
+    results = []
+    for group in facet_groups:
+        stock = apply_facet_group(joined_ctrl, group)["Latency"].to_numpy(dtype=np.int32)
+        mod = apply_facet_group(joined_mod, group)["Latency"].to_numpy(dtype=np.int32)
+        results.append((group["label"], stock, mod))
+    return results
