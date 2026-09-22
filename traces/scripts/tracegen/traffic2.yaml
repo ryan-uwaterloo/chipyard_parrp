@@ -20,7 +20,7 @@ active_sets:
   core_id: 2
 
 priming:
-  enabled: false
+  enabled: true
   associativity: 10
   op_type: STORE          # STORE | LOAD | random
   load_prob: 0.5           # only used if op_type: random

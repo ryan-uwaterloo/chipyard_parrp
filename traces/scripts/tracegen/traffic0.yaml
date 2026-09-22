@@ -16,13 +16,13 @@ cache:
 # partitions, or generate one config per core for a multi-core test.
 active_sets:
   mode: partition
-  sets_per_partition: 8
+  sets_per_partition: 16
   core_id: 0
 
 priming:
   enabled: true
   associativity: 10
-  op_type: STORE          # STORE | LOAD | random
+  op_type: LOAD          # STORE | LOAD | random
   load_prob: 0.5           # only used if op_type: random
   comp_delay: 100
   comp_delay_jitter: 15     # comp_delay is drawn from [100-15, 100+15] per op
