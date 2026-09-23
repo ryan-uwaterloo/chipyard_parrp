@@ -494,7 +494,7 @@ def load_llc_full_df(filepath: str) -> pd.DataFrame:
     """Full LLC completion rows including the new Address column and state flags."""
     return pd.read_csv(
         filepath,
-        usecols=["Address", "SourceID", "Opcode", "StartCycle", "EndCycle"] + FLAG_COLUMNS,
+        usecols=["Address", "SourceID", "Opcode", "StartCycle", "EndCycle", "NodeType"] + FLAG_COLUMNS,
     )
 
 
@@ -591,6 +591,8 @@ def apply_facet_group(df: pd.DataFrame, group: dict) -> pd.DataFrame:
     for flag in group["flags"]:
         if flag in FLAG_COLUMNS:
             mask &= df[flag].astype(bool)
+        elif flag in ("Load", "Store"):
+            mask &= (df["NodeType"] == flag)
         else:
             mask &= (df["Opcode"] == flag)
     return df.loc[mask]

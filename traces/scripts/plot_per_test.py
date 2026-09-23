@@ -293,11 +293,32 @@ def _load_reqtime_agg_variants(
 #                           (default: 50_000 — set to 0 for raw benchmarks with no warm-up)
 # order      : list[str]  – metric keys in display order; only enabled metrics are shown.
 #                           Omit to use DEFAULT_METRIC_ORDER (reqtimes first).
+# facet_by   : dict        – {metric_key: [group, ...]} — split a metric into multiple
+#                            x-axis slots instead of one aggregate slot. Currently supported
+#                            for "miss_penalty" and "probe_latency" only; both require the
+#                            LLC CSV's Address/state columns (see loaders.attach_state_*).
+#                            Each group is:
+#                              {
+#                                "cores": [int, ...],   – core IDs to include (OR'd together)
+#                                "flags": [str, ...],   – state filters, AND'd together.
+#                                                          Entries matching a FLAG_COLUMNS name
+#                                                          (NeedDRAM/NeedProbe/Evicting/BackInv)
+#                                                          filter on that boolean; anything else
+#                                                          is matched against Opcode instead.
+#                                "label": str,          – exact x-tick text for this slot
+#                                                          (no auto-generation — always required)
+#                              }
+#                            A metric present in `metrics` with True AND a key in `facet_by`
+#                            contributes one x-axis slot per group (not one slot for the whole
+#                            metric). A metric with no facet_by entry falls back to the single
+#                            aggregate slot from METRIC_DEFS, as before.
+#                            NOTE: rows that fail to join against an LLC transaction are dropped
+#                            with a [WARN] count printed — check the console output after
+#                            regenerating configs that lean on faceting.
 #
 # To add a new test, copy an existing block and adjust the values.
 # To disable a metric globally for all tests, set its bool to False here
 # and you never need to touch the loader code.
-
 TEST_CONFIGS = [
     {
         "test":  "probe-4",
@@ -327,6 +348,12 @@ TEST_CONFIGS = [
             "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
+        },
+        "facet_by": {
+            "miss_penalty": [
+                {"cores": [0, 1, 2, 3], "flags": ["Store"], "label": "MissPenalty-Stores"},
+                {"cores": [0, 1, 2, 3], "flags": ["Load"], "label": "MissPenalty-Loads"},
+            ],
         },
         # "output": "probe-4.svg",   # uncomment to override default
         # "num_sets": 64,
@@ -402,6 +429,12 @@ TEST_CONFIGS = [
             "reqtime_load":   True,
             "reqtime_store":  True,
         },
+        "facet_by": {
+            "miss_penalty": [
+                {"cores": [0, 1, 2, 3], "flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
+                {"cores": [0, 1, 2, 3], "flags": ["NeedDRAM"], "label": "MissPenalty-Rels"},
+            ],
+        },
     },
     {
         "test":  "hol-8",
@@ -431,22 +464,7 @@ TEST_CONFIGS = [
             "reqtime_store":  True,
         },
     },
-    # {
-    #     "test":  "hol-4",
-    #     "label": "HoL",
-    #     "order": [...],
-    #     "metrics": {...},
-    #     "facet_by": {
-    #         "miss_penalty": [
-    #             {"cores": [0, 1], "flags": ["NeedDRAM", "BackInv"], "label": "C0-1\nDRAM+BackInv"},
-    #             {"cores": [2, 3], "flags": ["NeedDRAM"],            "label": "C2-3\nDRAM"},
-    #         ],
-    #         "probe_latency": [
-    #             {"cores": [0], "flags": ["Evicting"], "label": "C0\nEvicting"},
-    #         ],
-    #     },
-    # },
-    # ---- Template for a new test ------------------------------------
+        # ---- Template for a new test ------------------------------------
     # {
     #     "test":       "my-test-4",
     #     "label":      "MyTest",
@@ -460,6 +478,15 @@ TEST_CONFIGS = [
     #         "dram":           False,
     #         "reqtime_load":   True,
     #         "reqtime_store":  True,
+    #     },
+    #     # Optional — split miss_penalty/probe_latency into per-core/per-state
+    #     # slots instead of one aggregate slot. Omit entirely for the default
+    #     # aggregate behavior.
+    #     "facet_by": {
+    #         "miss_penalty": [
+    #             {"cores": [0, 1], "flags": ["NeedDRAM", "BackInv"], "label": "C0-1\nDRAM+BackInv"},
+    #             {"cores": [2, 3], "flags": ["NeedDRAM"],            "label": "C2-3\nDRAM"},
+    #         ],
     #     },
     # },
 ]
@@ -514,6 +541,12 @@ ABLATION_CONFIGS = [
             "reqtime_load":   True,
             "reqtime_store":  True,
         },
+        "facet_by": {
+            "miss_penalty": [
+                {"cores": [0], "flags": [], "label": "MissPenalty-C0"},
+                {"cores": [1, 2, 3], "flags": ["NeedDRAM"], "label": "MissPenalty-Traffic"},
+            ],
+        },
     },
     {
         "test":   "mshrs-gen-4",
@@ -535,6 +568,35 @@ ABLATION_CONFIGS = [
         },
     },
 ]
+
+# ============================================================
+# Ablation configuration
+# ============================================================
+# Each entry compares two named variants of the SAME base test against
+# each other (e.g. two MSHR-count configs), rather than ctrl vs parrp.
+#
+# Required keys
+# -------------
+# test        : str  – base test name (used to build file paths)
+# label       : str  – human-readable name for titles / filenames
+# variant_a   : str  – first variant suffix (e.g. "ctrl-stock-mshrs")
+# variant_b   : str  – second variant suffix (e.g. "ctrl-20-mshrs")
+# metrics     : dict – {metric_key: bool}  True = include subplot
+#
+# Optional keys
+# -------------
+# output        : str        – output filename (default: f"{test}-ablation.svg")
+# legend_labels : (str, str) – legend text for (variant_a, variant_b)
+#                              (default: the variant names themselves)
+# data_start    : int         – warm-up cutoff in cycles (default: 50_000)
+# order         : list[str]   – metric keys in display order (default: DEFAULT_METRIC_ORDER)
+# cores         : list[int]   – restricts which cores' LSU reqtime data is aggregated
+#                               (only affects reqtime_load/reqtime_store; miss_penalty/
+#                               probe_latency facet_by groups set their own cores instead)
+# facet_by      : dict        – same shape and semantics as in TEST_CONFIGS (see above);
+#                               "miss_penalty" and "probe_latency" only. Groups are matched
+#                               against variant_a's and variant_b's joined LLC state the same
+#                               way stock/mod are joined in the non-ablation case.
 
 
 # ============================================================
@@ -650,8 +712,12 @@ def plot_ablation_test(cfg: dict, dirs: dict) -> None:
     metrics       = cfg["metrics"]
     output        = cfg.get("output", f"{test}-ablation.svg")
     legend_labels = cfg.get("legend_labels", (variant_a, variant_b))
+    facet_by      = cfg.get("facet_by", {})
 
-    from loaders import DEFAULT_DATA_START
+    from loaders import (
+        DEFAULT_DATA_START,
+        load_miss_penalty_faceted, load_probe_latency_faceted,
+    )
     data_start = cfg.get("data_start", DEFAULT_DATA_START)
 
     order  = cfg.get("order", DEFAULT_METRIC_ORDER)
@@ -668,20 +734,45 @@ def plot_ablation_test(cfg: dict, dirs: dict) -> None:
     print(f"  Metrics    : {', '.join(active)}")
     print(f"{'='*60}")
 
-    data: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    for metric in active:
-        mdef = ABLATION_METRIC_DEFS[metric]
-        print(f"  Loading {metric} …")
-        data[metric] = mdef["loader"](
-            paths, {**cfg, "test": test, "data_start": data_start}, dirs
-        )
+    # ---- Build ordered slot list: (title, arr_a, arr_b) ----------------
+    slots: list[tuple[str, np.ndarray, np.ndarray]] = []
 
-    n = len(active)
+    for metric in active:
+        if metric in facet_by:
+            groups = facet_by[metric]
+            print(f"  Loading {metric} (faceted, {len(groups)} groups) …")
+            if metric == "miss_penalty":
+                faceted = load_miss_penalty_faceted(
+                    paths["l1_a"], paths["l1_b"],
+                    paths["llc_a"], paths["llc_b"],
+                    groups, data_start=data_start, label=test,
+                )
+            elif metric == "probe_latency":
+                faceted = load_probe_latency_faceted(
+                    paths["probe_a"], paths["probe_b"],
+                    paths["llc_a"], paths["llc_b"],
+                    groups, data_start=data_start, label=test,
+                )
+            else:
+                raise NotImplementedError(f"facet_by not wired up for '{metric}' yet")
+            slots.extend(faceted)
+        else:
+            mdef = ABLATION_METRIC_DEFS[metric]
+            print(f"  Loading {metric} …")
+            arr_a, arr_b = mdef["loader"](
+                paths, {**cfg, "test": test, "data_start": data_start}, dirs
+            )
+            slots.append((mdef["title"], arr_a, arr_b))
+
+    if not slots:
+        print(f"  [skip] {test}: no data slots produced")
+        return
+
+    n = len(slots)
     x = np.arange(1, n + 1)
     fig, ax = plt.subplots(figsize=(1.1 * n + 0.6, 2.5))
 
-    for i, metric in enumerate(active):
-        arr_a, arr_b = data[metric]
+    for i, (_, arr_a, arr_b) in enumerate(slots):
         draw_violin_pair(ax, arr_a, arr_b, x_pos=x[i])
 
     def _wrap(text, max_chars=12):
@@ -695,10 +786,7 @@ def plot_ablation_test(cfg: dict, dirs: dict) -> None:
         return text[:mid] + "\n" + text[mid + 1:]
 
     ax.set_xticks(x)
-    ax.set_xticklabels(
-        [_wrap(ABLATION_METRIC_DEFS[m]["title"]) for m in active],
-        rotation=0, ha="center", fontsize=7,
-    )
+    ax.set_xticklabels([_wrap(t) for t, _, _ in slots], rotation=0, ha="center", fontsize=7)
     ax.set_ylabel("Cycles")
     ax.set_title(label)
     ax.set_xlim(0.5, n + 0.5)

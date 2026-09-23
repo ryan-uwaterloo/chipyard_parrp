@@ -21,7 +21,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         re.IGNORECASE)
     # Updated: now captures set and tag fields from the new log format
     meta_re = re.compile(
-        r"@ clk_cycle\s+(\d+): Req in MSHR; need dram\?: (\d+), need probe\? (\d+), evicting\? (\d+), back-inv\? (\d+), source: (0x[0-9a-fA-F]+), set: (0x[0-9a-fA-F]+), tag: (0x[0-9a-fA-F]+)",
+        r"@ clk_cycle\s+(\d+): Req in MSHR; need dram\?: (\d+), need probe\? (\d+), evicting\? (\d+), "
+        r"back-inv\? (\d+), source: (0x[0-9a-fA-F]+), set: (0x[0-9a-fA-F]+), tag: (0x[0-9a-fA-F]+), "
+        r"param: (\d+)",
         re.IGNORECASE)
     stall_re = re.compile(
         r"@ clk_cycle\s+(\d+): ReleaseData prevented from entering SinkC due to no putbuff space!",
@@ -282,6 +284,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 src        = int(m[6], 16)
                 mshr_set   = int(m[7], 16)
                 tag        = int(m[8], 16)
+                param      = int(m[9])
+                node_type  = "Store" if param in (1, 2) else "Load"   # NEW
 
                 # Look up the sink arrival time for this source so we can later
                 # compute SetBlockTime = MSHR_entry_cycle - sink_arrival_cycle.
@@ -304,7 +308,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     "set":        mshr_set,
                     "tag":        tag,
                     "sink_start": sink_start,
-                    "address":    address,          # NEW
+                    "address":    address,
+                    "node_type":  node_type,     # NEW
                 }
 
                 if need_probe:
@@ -629,9 +634,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         with open(csv_out, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Latency",
-                 "SetBlockTime",
-                 "ReleaseStallCycles", "SourceDCycle", "SourceDToComplete",
-                 "NeedDRAM", "NeedProbe", "Evicting", "BackInv", "Address"])
+                 "SetBlockTime", "ReleaseStallCycles", "SourceDCycle", "SourceDToComplete",
+                 "NeedDRAM", "NeedProbe", "Evicting", "BackInv", "Address", "NodeType"])  # NEW
             for src, opcode, start, end, lat, meta, stalls, source_d_cycle in results:
                 d_to_complete = (end - source_d_cycle) if source_d_cycle is not None else ""
                 meta_cycle  = meta.get('meta_cycle')
@@ -642,13 +646,13 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                                   else "")
                 writer.writerow([
                     f"0x{src:X}", opcode, start, end, lat,
-                    set_block_time,
-                    stalls,
+                    set_block_time, stalls,
                     source_d_cycle if source_d_cycle is not None else "",
                     d_to_complete,
                     meta.get('need_dram',''), meta.get('need_probe',''),
                     meta.get('evicting',''), meta.get('back_inv',''),
                     f"0x{address:X}" if address is not None else "",
+                    meta.get('node_type', ''),                                          # NEW
                 ])
         print(f"\n Results with metadata written to {csv_out}")
 
