@@ -23,7 +23,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     meta_re = re.compile(
         r"@ clk_cycle\s+(\d+): Req in MSHR; need dram\?: (\d+), need probe\? (\d+), evicting\? (\d+), "
         r"back-inv\? (\d+), source: (0x[0-9a-fA-F]+), set: (0x[0-9a-fA-F]+), tag: (0x[0-9a-fA-F]+), "
-        r"(0x[0-9a-fA-F]+)",
+        r"param: (0x[0-9a-fA-F]+)",
         re.IGNORECASE)
     stall_re = re.compile(
         r"@ clk_cycle\s+(\d+): ReleaseData prevented from entering SinkC due to no putbuff space!",
