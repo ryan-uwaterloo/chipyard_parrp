@@ -116,7 +116,10 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
     l2ways: Int,
     traceVCD: Boolean,
     fromCsv: Boolean,
-    testStartCycle: Int
+    testStartCycle: Int,
+    memLatency:     Int = 100,
+    memBandwidth:   Int = 10,
+    shimType:       String = "split"
   ): Unit = {
     var clock = 0L
 
@@ -129,7 +132,10 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
         L2ways = l2ways,
         L2sets = 64,
         L2beatBytes = 16,
-        L2blockBytes = 64
+        L2blockBytes = 64,
+        memLatency = memLatency,
+        memBandwidth = memBandwidth,
+        shimType = shimType
       )
     )
 
@@ -317,13 +323,16 @@ class ProtoTest extends AnyFlatSpec with ChiselScalatestTester {
   fromCsv: Boolean,
   l2ways: Int = 40,
   traceVCD: Boolean = false,
-  testStartCycle: Int = 50000
+  testStartCycle: Int = 50000,
+  memLatency:     Int = 100,
+  memBandwidth:   Int = 10,
+  shimType:       String = "split"
 ): Unit = { 
   prepareTraces(testFolder, numTiles, fromCsv)
 
   val (dag, idag) = buildDAGs(testFolder, testName, numTiles)
 
-  runSimulation(dag, idag, numTiles, l2ways, traceVCD, fromCsv, testStartCycle)
+  runSimulation(dag, idag, numTiles, l2ways, traceVCD, fromCsv, testStartCycle, memLatency, memBandwidth, shimType)
 }
 
 
@@ -446,69 +455,6 @@ it should "Run_nqueens-4" in {
   )
 }
 
-it should "Synthetic-nmshrs-4" in {
-  runTraceTest(
-    testFolder = "test_cases/nmshrs_test",
-    testName = "nmshrs-4",
-    numTiles = 4,
-    fromCsv = true,
-    traceVCD = true
-  )
-}
-
-it should "Synthetic-hol-4" in {
-  runTraceTest(
-    testFolder = "test_cases/hol_test",
-    testName = "hol-4",
-    numTiles = 4,
-    fromCsv = true,
-    traceVCD = true
-  )
-}
-
-it should "Synthetic-hol-8" in {
-  runTraceTest(
-    testFolder = "test_cases/hol_test",
-    testName = "hol-8",
-    numTiles = 8,
-    l2ways = 80,
-    fromCsv = true,
-    traceVCD = true,
-    testStartCycle = 100000
-  )
-}
-
-it should "Synthetic-probe-4" in {
-  runTraceTest(
-    testFolder = "test_cases/probe_test",
-    testName = "probe-4",
-    numTiles = 4,
-    fromCsv = true,
-    traceVCD = true
-  )
-}
-
-it should "Synthetic-relbuf-4" in {
-  runTraceTest(
-    testFolder = "test_cases/releasebuf_test",
-    testName = "relbuf-4",
-    numTiles = 4,
-    fromCsv = true,
-    traceVCD = true
-  )
-}
-
-it should "Synthetic-mempressure-4" in {
-  runTraceTest(
-    testFolder = "test_cases/releasebuf_test_diffsets",
-    testName = "mempressure-4",
-    numTiles = 4,
-    fromCsv = true,
-    traceVCD = true,
-    testStartCycle = 200000
-  )
-}
-
 it should "Synthetic-mempressure-gen-4" in {
   runTraceTest(
     testFolder = "test_cases/tracegen_mempressure",
@@ -516,7 +462,9 @@ it should "Synthetic-mempressure-gen-4" in {
     numTiles = 4,
     fromCsv = true,
     traceVCD = true,
-    testStartCycle = 200000
+    testStartCycle = 200000,
+    memLatency = 10,
+    memBandwidth = 100
   )
 }
 
@@ -603,4 +551,71 @@ it should "Synthetic-relbuf-gen-8" in {
     traceVCD = true
   )
 }
+
+// Comment out old non-gen'd test cases
+// it should "Synthetic-nmshrs-4" in {
+//   runTraceTest(
+//     testFolder = "test_cases/nmshrs_test",
+//     testName = "nmshrs-4",
+//     numTiles = 4,
+//     fromCsv = true,
+//     traceVCD = true
+//   )
+// }
+
+// it should "Synthetic-hol-4" in {
+//   runTraceTest(
+//     testFolder = "test_cases/hol_test",
+//     testName = "hol-4",
+//     numTiles = 4,
+//     fromCsv = true,
+//     traceVCD = true
+//   )
+// }
+
+// it should "Synthetic-hol-8" in {
+//   runTraceTest(
+//     testFolder = "test_cases/hol_test",
+//     testName = "hol-8",
+//     numTiles = 8,
+//     l2ways = 80,
+//     fromCsv = true,
+//     traceVCD = true,
+//     testStartCycle = 100000
+//   )
+// }
+
+// it should "Synthetic-probe-4" in {
+//   runTraceTest(
+//     testFolder = "test_cases/probe_test",
+//     testName = "probe-4",
+//     numTiles = 4,
+//     fromCsv = true,
+//     traceVCD = true
+//   )
+// }
+
+// it should "Synthetic-relbuf-4" in {
+//   runTraceTest(
+//     testFolder = "test_cases/releasebuf_test",
+//     testName = "relbuf-4",
+//     numTiles = 4,
+//     fromCsv = true,
+//     traceVCD = true
+//   )
+// }
+
+// it should "Synthetic-mempressure-4" in {
+//   runTraceTest(
+//     testFolder = "test_cases/releasebuf_test_diffsets",
+//     testName = "mempressure-4",
+//     numTiles = 4,
+//     fromCsv = true,
+//     traceVCD = true,
+//     testStartCycle = 200000,
+//     memLatency = 10,
+//     memBandwidth = 100
+//   )
+// }
+
 }

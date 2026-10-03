@@ -589,12 +589,17 @@ def apply_facet_group(df: pd.DataFrame, group: dict) -> pd.DataFrame:
     anything else is matched against Opcode."""
     mask = df["Core"].isin(group["cores"])
     for flag in group["flags"]:
-        if flag in FLAG_COLUMNS:
-            mask &= df[flag].astype(bool)
-        elif flag in ("Load", "Store"):
-            mask &= (df["NodeType"] == flag)
+        negate = flag.startswith("!")
+        key = flag[1:] if negate else flag
+
+        if key in FLAG_COLUMNS:
+            cond = df[key].astype(bool)
+        elif key in ("Load", "Store"):
+            cond = (df["NodeType"] == key)
         else:
-            mask &= (df["Opcode"] == flag)
+            cond = (df["Opcode"] == key)
+
+        mask &= (~cond if negate else cond)
     return df.loc[mask]
 
 
