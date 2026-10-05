@@ -552,6 +552,28 @@ it should "Synthetic-relbuf-gen-8" in {
   )
 }
 
+it should "Synthetic-relbuf-gen-6" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_relbuf",
+    testName = "relbuf-gen-6",
+    numTiles = 6,
+    l2ways = 60,
+    fromCsv = true,
+    traceVCD = true
+  )
+}
+
+it should "Synthetic-relbuf-gen-4" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_relbuf",
+    testName = "relbuf-gen-4",
+    numTiles = 4,
+    l2ways = 40,
+    fromCsv = true,
+    traceVCD = true
+  )
+}
+
 // Comment out old non-gen'd test cases
 // it should "Synthetic-nmshrs-4" in {
 //   runTraceTest(
