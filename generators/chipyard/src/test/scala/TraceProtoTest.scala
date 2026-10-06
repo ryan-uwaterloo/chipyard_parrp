@@ -549,7 +549,7 @@ it should "Synthetic-probe-gen-8" in {
     numTiles = 8,
     l2ways = 80,
     fromCsv = true,
-    traceVCD = false,
+    traceVCD = true,
   )
 }
 
@@ -558,6 +558,28 @@ it should "Synthetic-hol-gen-4" in {
     testFolder = "test_cases/tracegen_hol",
     testName = "hol-gen-4",
     numTiles = 4,
+    fromCsv = true,
+    traceVCD = false,
+  )
+}
+
+it should "Synthetic-hol-gen-6" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_hol",
+    testName = "hol-gen-6",
+    numTiles = 6,
+    l2ways = 60,
+    fromCsv = true,
+    traceVCD = false,
+  )
+}
+
+it should "Synthetic-hol-gen-8" in {
+  runTraceTest(
+    testFolder = "test_cases/tracegen_hol",
+    testName = "hol-gen-8",
+    numTiles = 8,
+    l2ways = 80,
     fromCsv = true,
     traceVCD = false,
   )
