@@ -3,7 +3,7 @@ import re
 import argparse
 import csv
 import os
-from collections import defaultdict
+from collections import defaultdict, deque
 
 def addr_set(addr):
     """Extract set bits [11:6] from an address."""
@@ -40,6 +40,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     sink_d_re = re.compile(
         r"@ clk_cycle\s+(\d+): New Sink D Request! opcode:\s*(\w+), source:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    # NEW: Source C (LLC -> memory writes). Only the opcode is parsed here; the
+    # source/addr fields are pulled out of the remainder of the line separately
+    # so the regex doesn't depend on the order of the fields you add to the log.
+    source_c_re = re.compile(
+        r"@ clk_cycle\s+(\d+): New Source C Request! opcode:\s*(\w+)(.*)",
+        re.IGNORECASE)
+    source_field_re = re.compile(r"source:\s*(0x[0-9a-fA-F]+)", re.IGNORECASE)
+    addr_field_re   = re.compile(r"addr:\s*(0x[0-9a-fA-F]+)", re.IGNORECASE)
     # L1 Regexes
     l1_new_re = re.compile(
         r"@ clk_cycle\s+(\d+): New L1 Request! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
@@ -113,8 +121,37 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     pending_source_d = {}  # src -> (opcode, start_cycle, end_cycle, latency, meta, stall_cycles)
     source_a_times = {}   # (src, opcode) -> start_cycle
-    dram_results = []     # [(src, start, end, latency)]
+    dram_results = []     # [(src, start, end, latency)]            (DRAM reads)
     l1_hits = defaultdict(int)  # core -> hit count
+
+    # -----------------------------------------------------------------------
+    # NEW: LLC MSHR occupancy
+    #
+    # Start: "Req in MSHR; ..."                              (keyed by source)
+    # End:   "<AcquireBlock|Release|ReleaseData> Request completed; sent to
+    #         directory! source: X"                          (same source)
+    #
+    # If a source shows up in "Req in MSHR" again before its completion was
+    # seen, the newer start wins (so one missing completion line can't poison
+    # every later request with that source) and the event is counted.
+    # -----------------------------------------------------------------------
+    llc_mshr_start = defaultdict(deque)        # src -> {"start": cycle, "need_dram": .., ...}
+    llc_mshr_results = []      # [(src, opcode, start, end, occupancy, info)]
+    llc_mshr_overwritten = 0
+
+    # -----------------------------------------------------------------------
+    # NEW: DRAM write time
+    #
+    # Start: first beat of "New Source C Request! opcode: ReleaseData"
+    # End:   "New Sink D Request! opcode: ReleaseAck" with the same source
+    #
+    # Plain Release opcodes never open a write, so their ReleaseAcks find no
+    # pending entry and are ignored.
+    # -----------------------------------------------------------------------
+    dram_write_start = {}      # src -> (start_cycle, addr or None)
+    dram_write_results = []    # [(src, start, end, latency, addr or None)]
+    source_c_data_no_source = 0   # ReleaseData Source C lines lacking a source field
+    ignored_release_acks = 0      # Sink D ReleaseAcks with no pending ReleaseData write
 
     # Mapping from completion opcode to the expected Source D opcode
     # Release/ReleaseData are acknowledged by ReleaseAck;
@@ -274,6 +311,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
             # ---------------------------------------------------------------
             # MSHR metadata line — now also carries set and tag.
             # If need_probe is set, probe timing starts HERE (not at Source B).
+            # This line is also the start of LLC MSHR occupancy.
             # ---------------------------------------------------------------
             if m := meta_re.search(line):
                 cycle      = int(m[1])
@@ -311,6 +349,18 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     "address":    address,
                     "node_type":  node_type,     # NEW
                 }
+
+                # NEW: LLC MSHR occupancy start (keyed by source)
+                llc_mshr_start[src].append({
+                    "start":      cycle,
+                    "need_dram":  dram,
+                    "need_probe": need_probe,
+                    "evicting":   evicting,
+                    "back_inv":   back_inv,
+                    "set":        mshr_set,
+                    "tag":        tag,
+                    "param":      param,
+                })
 
                 if need_probe:
                     # Create a new probe batch. The MSHR cycle is the start
@@ -370,6 +420,41 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 opcode = m[2]
                 src    = int(m[3], 16)
                 sink_key = (src, opcode)
+
+                # NEW: LLC MSHR occupancy end. Done first and independently of the
+                # sink/Source D matching below, so it is never affected by the
+                # duplicate/cooldown/rejection logic. Popping makes a repeated
+                # completion line for the same source a no-op.
+                # LLC MSHR occupancy end (FIFO)
+                # LLC MSHR occupancy end (FIFO), independent of sink/Source D matching.
+                # Consume the oldest outstanding start for this source.
+                mshr_queue = llc_mshr_start.get(src)
+
+                if mshr_queue:
+                    mshr_info = mshr_queue.popleft()
+
+                    occupancy = cycle - mshr_info["start"]
+                    llc_mshr_results.append(
+                        (src, opcode, mshr_info["start"], cycle, occupancy, mshr_info)
+                    )
+
+                    if debug:
+                        print(
+                            f"[line {line_no}] LLC MSHR occupancy: "
+                            f"source=0x{src:X}, opcode={opcode}, "
+                            f"start={mshr_info['start']}, end={cycle}, "
+                            f"occupancy={occupancy}"
+                        )
+
+                    # Remove the source key if no starts remain.
+                    if not mshr_queue:
+                        del llc_mshr_start[src]
+
+                elif debug:
+                    print(
+                        f"[line {line_no}] LLC MSHR completion with no 'Req in MSHR': "
+                        f"source=0x{src:X}, opcode={opcode}, cycle={cycle}"
+                    )
 
                 # Skip duplicate completions within short window
                 last = last_completion.get(sink_key)
@@ -542,6 +627,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     print(f"[line {line_no}] L1 DATA addr=0x{addr:X}, cycle={cycle}")
                 continue
 
+            # --- L1 MSHR free: end of L1 MSHR occupancy (New L1 Request -> here) ---
             if m := l1_free_re.search(line):
                 cycle = int(m[1])
                 addr  = int(m[2], 16)
@@ -601,7 +687,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                           f"— probe timing is driven by MSHR, not Source B")
                 continue
 
-            # Memory timing
+            # Memory timing (reads): Source A AcquireBlock -> Sink D GrantData
             if m := source_a_re.search(line):
                 cycle  = int(m[1])
                 opcode = m[2]
@@ -612,6 +698,29 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         source_a_times[key] = cycle
                         if debug:
                             print(f"[line {line_no}] Source A: cycle={cycle}, opcode={opcode}, source=0x{src:X}")
+                continue
+
+            # NEW: Memory timing (writes): Source C ReleaseData -> Sink D ReleaseAck
+            if m := source_c_re.search(line):
+                cycle  = int(m[1])
+                opcode = m[2]
+                rest   = m[3]
+                if opcode == "ReleaseData":
+                    sm = source_field_re.search(rest)
+                    if sm is None:
+                        # Log line has no source field yet; can't match this write.
+                        source_c_data_no_source += 1
+                        if debug:
+                            print(f"[line {line_no}] Source C ReleaseData has no source field, "
+                                  f"cycle={cycle}")
+                    else:
+                        src = int(sm[1], 16)
+                        # ReleaseData is multi-beat: only the first beat starts the timer.
+                        if src not in dram_write_start:
+                            am = addr_field_re.search(rest)
+                            dram_write_start[src] = (cycle, int(am[1], 16) if am else None)
+                            if debug:
+                                print(f"[line {line_no}] DRAM write start: source=0x{src:X}, cycle={cycle}")
                 continue
 
             if m := sink_d_re.search(line):
@@ -627,6 +736,22 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         if debug:
                             print(f"[line {line_no}] DRAM complete: source=0x{src:X}, "
                                   f"start={start}, end={cycle}, latency={latency}")
+                elif opcode == "ReleaseAck":
+                    # ReleaseAcks are also issued for plain Releases (no DRAM write);
+                    # those have no pending ReleaseData entry and are ignored.
+                    w = dram_write_start.pop(src, None)
+                    if w is not None:
+                        start, waddr = w
+                        latency = cycle - start
+                        dram_write_results.append((src, start, cycle, latency, waddr))
+                        if debug:
+                            print(f"[line {line_no}] DRAM write complete: source=0x{src:X}, "
+                                  f"start={start}, end={cycle}, latency={latency}")
+                    else:
+                        ignored_release_acks += 1
+                        if debug:
+                            print(f"[line {line_no}] Sink D ReleaseAck source=0x{src:X} has no "
+                                  f"pending ReleaseData write (plain Release?) — ignored")
                 continue
 
     # --- CSV output ---
@@ -656,13 +781,39 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 ])
         print(f"\n Results with metadata written to {csv_out}")
 
+        # DRAM reads (unchanged file name / schema)
         dram_csv = csv_out.replace(".csv", "-dram.csv")
         with open(dram_csv, "w", newline="") as fout:
             writer = csv.writer(fout)
             writer.writerow(["SourceID", "StartCycle", "EndCycle", "Latency"])
             for src, start, end, lat in dram_results:
                 writer.writerow([f"0x{src:X}", start, end, lat])
-        print(f"\n DRAM results written to {dram_csv}")
+        print(f"\n DRAM read results written to {dram_csv}")
+
+        # NEW: DRAM writes
+        dram_write_csv = csv_out.replace(".csv", "-dram-write.csv")
+        with open(dram_write_csv, "w", newline="") as fout:
+            writer = csv.writer(fout)
+            writer.writerow(["SourceID", "StartCycle", "EndCycle", "Latency", "Address"])
+            for src, start, end, lat, waddr in dram_write_results:
+                writer.writerow([f"0x{src:X}", start, end, lat,
+                                 f"0x{waddr:X}" if waddr is not None else ""])
+        print(f"\n DRAM write results written to {dram_write_csv}")
+
+        # NEW: LLC MSHR occupancy
+        llc_mshr_csv = csv_out.replace(".csv", "-llc-mshr.csv")
+        with open(llc_mshr_csv, "w", newline="") as fout:
+            writer = csv.writer(fout)
+            writer.writerow(["SourceID", "Opcode", "StartCycle", "EndCycle", "Occupancy",
+                             "NeedDRAM", "NeedProbe", "Evicting", "BackInv",
+                             "Set", "Tag", "Param"])
+            for src, opcode, start, end, occ, info in llc_mshr_results:
+                writer.writerow([
+                    f"0x{src:X}", opcode, start, end, occ,
+                    info["need_dram"], info["need_probe"], info["evicting"], info["back_inv"],
+                    f"0x{info['set']:X}", f"0x{info['tag']:X}", f"0x{info['param']:X}",
+                ])
+        print(f"\n LLC MSHR occupancy written to {llc_mshr_csv}")
 
     # --- Summary stats ---
     print(f"\nSummary:")
@@ -721,6 +872,22 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         print(f"\nL1 Probe Summary:")
         print(f"  {len(probe_results)} Probes completed")
         print(f"  {pending_probe_count} Probes still pending")
+
+    # NEW: LLC MSHR + DRAM summaries
+    print(f"\nLLC MSHR Occupancy Summary:")
+    print(f"  {len(llc_mshr_results)} requests completed")
+    print(f"  {len(llc_mshr_start)} still pending (no completion seen)")
+    if llc_mshr_overwritten:
+        print(f"  [WARN] {llc_mshr_overwritten} 'Req in MSHR' starts were overwritten before a "
+              f"completion was seen (duplicate lines or missing completions)")
+
+    print(f"\nDRAM Summary:")
+    print(f"  {len(dram_results)} reads completed | {len(source_a_times)} reads pending")
+    print(f"  {len(dram_write_results)} writes completed | {len(dram_write_start)} writes pending")
+    print(f"  {ignored_release_acks} Sink D ReleaseAcks ignored (no pending ReleaseData write)")
+    if source_c_data_no_source:
+        print(f"  [WARN] {source_c_data_no_source} 'Source C ReleaseData' lines had no 'source:' field, "
+              f"so they could not be timed. Add source to that log line.")
 
     # Optional: pending warnings in debug mode
     if debug and sink_times:
@@ -787,6 +954,25 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
             print(f"  {label}: set=0x{s:X}, mshr_source=0x{mshr_source:X}, "
                   f"start={start}, end={end}, latency={lat}")
 
+    # NEW: LLC MSHR occupancy
+    if llc_mshr_results:
+        by_occ = sorted(llc_mshr_results, key=lambda r: r[4])
+        for label, r in [("LLC MSHR min", by_occ[0]), ("LLC MSHR max", by_occ[-1])]:
+            src, opcode, start, end, occ, info = r
+            print(f"  {label}: opcode={opcode}, source=0x{src:X}, start={start}, end={end}, occupancy={occ}")
+
+    # NEW: DRAM reads / writes
+    if dram_results:
+        by_lat = sorted(dram_results, key=lambda r: r[3])
+        for label, r in [("DRAM read min", by_lat[0]), ("DRAM read max", by_lat[-1])]:
+            src, start, end, lat = r
+            print(f"  {label}: source=0x{src:X}, start={start}, end={end}, latency={lat}")
+    if dram_write_results:
+        by_lat = sorted(dram_write_results, key=lambda r: r[3])
+        for label, r in [("DRAM write min", by_lat[0]), ("DRAM write max", by_lat[-1])]:
+            src, start, end, lat, waddr = r
+            print(f"  {label}: source=0x{src:X}, start={start}, end={end}, latency={lat}")
+
     # Max residual: largest |EndCycle - SourceDCycle| across all Release/ReleaseData results
     release_results_with_sd = [
         r for r in results
@@ -806,7 +992,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 def main():
     parser = argparse.ArgumentParser(
         description="Compute request processing latency using (source, opcode) keys, "
-                    "including ReleaseData stall tracking and metadata."
+                    "including ReleaseData stall tracking and metadata. Also extracts "
+                    "L1 miss penalty / MSHR occupancy, LLC MSHR occupancy, probe time, "
+                    "and DRAM read/write time."
     )
     parser.add_argument("logfile", help="Path to the log file")
     parser.add_argument("--csv",   help="Optional output CSV file path")
