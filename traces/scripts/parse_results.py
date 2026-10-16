@@ -61,6 +61,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_release_new_re = re.compile(
         r"@ clk_cycle\s+(\d+): New L1 Release! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
+    l1_release_in_re = re.compile(
+        r"@ clk_cycle\s+(\d+): L1 Release In RelU! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
+        re.IGNORECASE)
     l1_release_complete_re = re.compile(
         r"@ clk_cycle\s+(\d+): L1 Release Complete! Address:\s*(0x[0-9a-fA-F]+), Core:\s*(0x[0-9a-fA-F]+)",
         re.IGNORECASE)
@@ -87,8 +90,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     l1_start = {}         # (addr, core) -> cycle
     l1_data = {}          # (addr, core) -> cycle
     l1_results = []       # results list
-    l1_release_start = {}   # (addr, core) -> cycle
+    l1_release_start = {}   # (addr, core) -> New L1 Release cycle
     l1_release_results = [] # (addr, core, start, end, latency)
+    l1_release_aru_results = [] # (addr, core, start, in_relu, RelUArbTime)
 
     # -----------------------------------------------------------------------
     # Probe tracking
@@ -659,6 +663,32 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         print(f"[line {line_no}] L1 RELEASE NEW addr=0x{addr:X}, core=0x{core:X}, cycle={cycle}")
                 continue
 
+            # --- L1 release enters the release unit: arbitration delay ---
+            if m := l1_release_in_re.search(line):
+                cycle = int(m[1])
+                addr  = int(m[2], 16)
+                core  = int(m[3], 16)
+                key   = (addr, core)
+
+                if key in l1_release_start:
+                    start = l1_release_start[key]
+                    arb_time = cycle - start
+                    l1_release_aru_results.append(
+                        (addr, core, start, cycle, arb_time)
+                    )
+                    if debug:
+                        print(
+                            f"[line {line_no}] RelUArbTime addr=0x{addr:X}, "
+                            f"core=0x{core:X}, start={start}, end={cycle}, "
+                            f"RelUArbTime={arb_time}"
+                        )
+                elif debug:
+                    print(
+                        f"[line {line_no}] L1 Release In RelU unmatched "
+                        f"addr=0x{addr:X}, core=0x{core:X}, cycle={cycle}"
+                    )
+                continue
+
             if m := l1_release_complete_re.search(line):
                 cycle = int(m[1])
                 addr  = int(m[2], 16)
@@ -850,9 +880,20 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 writer.writerow([f"{addr:#X}", f"0x{core:X}", start, end, lat])
         print(f"\nL1 Release results written to {release_csv}")
 
+        release_aru_csv = l1_out.replace(".csv", "_release_aru.csv")
+        with open(release_aru_csv, "w", newline="") as fout:
+            writer = csv.writer(fout)
+            writer.writerow(["Address", "Core", "StartCycle", "InRelUCycle", "RelUArbTime"])
+            for addr, core, start, in_relu, arb_time in l1_release_aru_results:
+                writer.writerow([
+                    f"{addr:#X}", f"0x{core:X}", start, in_relu, arb_time
+                ])
+        print(f"\nRelU arbitration results written to {release_aru_csv}")
+
         print(f"\nL1 Release Summary:")
         print(f"  {len(l1_release_results)} L1 releases completed")
         print(f"  {len(l1_release_start)} L1 releases still pending")
+        print(f"  {len(l1_release_aru_results)} RelU arbitration times captured")
 
         # Probe CSV now uses Set as the key instead of Address
         probe_csv = csv_out.replace(".csv", "-probes.csv")
@@ -945,6 +986,14 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
         for label, r in [("L1 release min", by_lat[0]), ("L1 release max", by_lat[-1])]:
             addr, core, start, end, lat = r
             print(f"  {label}: addr=0x{addr:X}, core=0x{core:X}, start={start}, end={end}, latency={lat}")
+
+    # RelU arbitration times
+    if l1_release_aru_results:
+        by_arb = sorted(l1_release_aru_results, key=lambda r: r[4])
+        for label, r in [("RelUArbTime min", by_arb[0]), ("RelUArbTime max", by_arb[-1])]:
+            addr, core, start, in_relu, arb_time = r
+            print(f"  {label}: addr=0x{addr:X}, core=0x{core:X}, "
+                  f"start={start}, end={in_relu}, RelUArbTime={arb_time}")
 
     # Probes
     if probe_results:
