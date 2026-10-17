@@ -39,6 +39,11 @@ from loaders import (
     load_probe_latency,
     load_dram,
     load_reqtimes,
+    load_dram_write,
+    load_l1_occup,
+    load_llc_occup_acq,
+    load_llc_occup_rel,
+    load_evict_queue,
     get_cores,
     CACHE_TYPES,
 )
@@ -136,6 +141,51 @@ METRIC_DEFS = {
             num_cores=cfg.get("num_cores", 4),
         ),
     },
+    "l1_occupancy": {
+        "ylabel": "L1 Occupancy Time (cycles)",
+        "title":  "L1 MSHR Occupancy",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_l1_occup(p["l1_ctrl"],  cfg["data_start"]),
+            load_l1_occup(p["l1_parrp"], cfg["data_start"]),
+        ),
+    },
+    "llc_occupancy_acq": {
+        "ylabel": "LLC Occupancy Time (cycles)",
+        "title":  "LLC MSHR Occupancy (Acquires)",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_llc_occup_acq(p["llc_occup_ctrl"],  cfg["data_start"]),
+            load_llc_occup_acq(p["llc_occup_parrp"], cfg["data_start"]),
+        ),
+    },
+    "llc_occupancy_rel": {
+        "ylabel": "LLC Occupancy Time (cycles)",
+        "title":  "LLC MSHR Occupancy (Releases)",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_llc_occup_rel(p["llc_occup_ctrl"],  cfg["data_start"]),
+            load_llc_occup_rel(p["llc_occup_parrp"], cfg["data_start"]),
+        ),
+    },
+    "dram_write": {
+        "ylabel": "DRAM Write Time (cycles)",
+        "title":  "DRAM Write Time",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_dram_write(p["dram_write_ctrl"],  cfg["data_start"]),
+            load_dram_write(p["dram_write_parrp"], cfg["data_start"]),
+        ),
+    },
+    "relu_arb": {
+        "ylabel": "Release Unit Arbitration Time",
+        "title":  "Release Unit Arbitration Time",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_evict_queue(p["relu_arb_ctrl"],  cfg["data_start"]),
+            load_evict_queue(p["relu_arb_parrp"], cfg["data_start"]),
+        ),
+    },
 }
 
 ABLATION_METRIC_DEFS = {
@@ -187,6 +237,14 @@ ABLATION_METRIC_DEFS = {
             load_dram(p["dram_b"], cfg["data_start"]),
         ),
     },
+    "dram_write": {
+        "ylabel": "DRAM Access Time (cycles)",
+        "title":  "DRAM Access Time",
+        "loader": lambda p, cfg, dirs: (
+            load_dram_write(p["dram_w_a"], cfg["data_start"]),
+            load_dram_write(p["dram_w_b"], cfg["data_start"]),
+        ),
+    },
     "reqtime_load": {
         "ylabel": "Request Time (cycles)",
         "title":  "LSU Load Request Time",
@@ -205,6 +263,42 @@ ABLATION_METRIC_DEFS = {
             "Store", ["data"],
             num_cores=cfg.get("num_cores", 4),
             cores=cfg.get("cores"),
+        ),
+    },
+    "l1_occupancy": {
+        "ylabel": "L1 Occupancy Time (cycles)",
+        "title":  "L1 MSHR Occupancy",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_l1_occup(p["l1_a"],  cfg["data_start"]),
+            load_l1_occup(p["l1_b"], cfg["data_start"]),
+        ),
+    },
+    "llc_occupancy_acq": {
+        "ylabel": "LLC Occupancy Time (cycles)",
+        "title":  "LLC MSHR Occupancy (Acquires)",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_llc_occup_acq(p["llc_occup_a"],  cfg["data_start"]),
+            load_llc_occup_acq(p["llc_occup_b"], cfg["data_start"]),
+        ),
+    },
+    "llc_occupancy_rel": {
+        "ylabel": "LLC Occupancy Time (cycles)",
+        "title":  "LLC MSHR Occupancy (Releases)",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_llc_occup_rel(p["llc_occup_a"],  cfg["data_start"]),
+            load_llc_occup_rel(p["llc_occup_b"], cfg["data_start"]),
+        ),
+    },
+    "relu_arb": {
+        "ylabel": "Release Unit Arbitration Time",
+        "title":  "Release Unit Arbitration Time",
+        # Stores only come from data cache
+        "loader": lambda p, cfg, dirs: (
+            load_evict_queue(p["relu_arb_a"],  cfg["data_start"]),
+            load_evict_queue(p["relu_arb_b"], cfg["data_start"]),
         ),
     },
 }
@@ -320,92 +414,26 @@ def _load_reqtime_agg_variants(
 # To disable a metric globally for all tests, set its bool to False here
 # and you never need to touch the loader code.
 TEST_CONFIGS = [
-    {
-        "test":  "probe-4",
-        "label": "Probe",
-        # "order": ["probe_latency", "miss_penalty"],
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  False,
-            "llc_residual":   False,
-            "probe_latency":  True,
-            "dram":           True,
-            "reqtime_load":   True,
-            "reqtime_store":  True,
-        },
-        # "output": "probe-4.svg",   # uncomment to override default
-        # "num_sets": 64,
-    },
+    # {
+    #     "test":  "probe-4",
+    #     "label": "Probe",
+    #     # "order": ["probe_latency", "miss_penalty"],
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  False,
+    #         "llc_residual":   False,
+    #         "probe_latency":  True,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  True,
+    #     },
+    #     # "output": "probe-4.svg",   # uncomment to override default
+    #     # "num_sets": 64,
+    # },
     {
         "test":  "probe-gen-4",
         "label": "Probe",
-        "order": ["probe_latency", "miss_penalty"],
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  False,
-            "llc_residual":   False,
-            "probe_latency":  True,
-            "dram":           True,
-            "reqtime_load":   True,
-            "reqtime_store":  True,
-        },
-        "facet_by": {
-            "miss_penalty": [
-                {"cores": [0, 1, 2, 3], "flags": ["Store"], "label": "MissPenalty-Stores"},
-                {"cores": [0, 1, 2, 3], "flags": ["Load"], "label": "MissPenalty-Loads"},
-            ],
-        },
-        # "output": "probe-4.svg",   # uncomment to override default
-        # "num_sets": 64,
-    },
-    {
-        "test":  "relbuf-4",
-        "label": "RelBuf",
-        "data_start": 50_000,
-        "order": ["eviction_time", "miss_penalty", "reqtime_store", "dram"],
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  True,
-            "llc_residual":   False,
-            "probe_latency":  False,
-            "dram":           True,
-            "reqtime_load":   False,
-            "reqtime_store":  True,
-        },
-    },
-    {
-        "test":  "mempressure-4",
-        "label": "MemPressure",
-        "data_start": 200_000,
-        "order": ["dram", "miss_penalty", "eviction_time", "reqtime_load"],
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  True,
-            "llc_residual":   False,
-            "probe_latency":  False,
-            "dram":           True,
-            "reqtime_load":   True,
-            "reqtime_store":  False,
-        },
-    },
-    {
-        "test":  "nmshrs-4",
-        "label": "nMSHRs",
-        # "order": ["reqtime_load", "miss_penalty", "dram"]
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  False,
-            "llc_residual":   False,
-            "probe_latency":  False,
-            "dram":           True,
-            "reqtime_load":   True,
-            "reqtime_store":  False,
-        },
-    },
-    {
-        "test":  "hol-4",
-        "label": "HoL",
-        "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
+        "order": ["probe_latency", "miss_penalty", "l1_occupancy", "llc_occupancy_acq"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -414,12 +442,134 @@ TEST_CONFIGS = [
             "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+        "join_by_core": False,
+        "facet_by": {
+            "miss_penalty": [
+                {"flags": ["Store"], "label": "MissPenalty-Stores"},
+                {"flags": ["Load"], "label": "MissPenalty-Loads"},
+            ],
         },
     },
+    {
+        "test":  "probe-gen-6",
+        "label": "Probe",
+        "order": ["probe_latency", "miss_penalty", "l1_occupancy", "llc_occupancy_acq"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+        "join_by_core": False,
+        "facet_by": {
+            "miss_penalty": [
+                {"flags": ["Store"], "label": "MissPenalty-Stores"},
+                {"flags": ["Load"], "label": "MissPenalty-Loads"},
+            ],
+        },
+    },
+    {
+        "test":  "probe-gen-8",
+        "label": "Probe",
+        "order": ["probe_latency", "miss_penalty", "l1_occupancy", "llc_occupancy_acq"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+        "join_by_core": False,
+        "facet_by": {
+            "miss_penalty": [
+                {"flags": ["Store"], "label": "MissPenalty-Stores"},
+                {"flags": ["Load"], "label": "MissPenalty-Loads"},
+            ],
+        },
+    },
+    # {
+    #     "test":  "relbuf-4",
+    #     "label": "RelBuf",
+    #     "data_start": 50_000,
+    #     "order": ["eviction_time", "miss_penalty", "reqtime_store", "dram"],
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   False,
+    #         "probe_latency":  False,
+    #         "dram":           True,
+    #         "reqtime_load":   False,
+    #         "reqtime_store":  True,
+    #     },
+    # },
+    # {
+    #     "test":  "mempressure-4",
+    #     "label": "MemPressure",
+    #     "data_start": 200_000,
+    #     "order": ["dram", "miss_penalty", "eviction_time", "reqtime_load"],
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   False,
+    #         "probe_latency":  False,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  False,
+    #     },
+    # },
+    # {
+    #     "test":  "nmshrs-4",
+    #     "label": "nMSHRs",
+    #     # "order": ["reqtime_load", "miss_penalty", "dram"]
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  False,
+    #         "llc_residual":   False,
+    #         "probe_latency":  False,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  False,
+    #     },
+    # },
+    # {
+    #     "test":  "hol-4",
+    #     "label": "HoL",
+    #     "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   True,
+    #         "probe_latency":  True,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  True,
+    #     },
+    # },
     {
         "test":  "hol-gen-4",
         "label": "HoL",
-        "order": ["eviction_time", "probe_latency", "miss_penalty"],
+        "order": ["eviction_time", "probe_latency", "miss_penalty", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -428,18 +578,24 @@ TEST_CONFIGS = [
             "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
         },
+        "join_by_core": False,
         "facet_by": {
             "miss_penalty": [
-                {"cores": [0, 1, 2, 3], "flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
-                {"cores": [0, 1, 2, 3], "flags": ["NeedDRAM"], "label": "MissPenalty-Rels"},
+                {"flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
+                {"flags": ["!NeedProbe"], "label": "MissPenalty-Rels"},
             ],
         },
     },
     {
-        "test":  "hol-8",
-        "label": "HoL 8",
-        "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
+        "test":  "hol-gen-6",
+        "label": "HoL",
+        "order": ["eviction_time", "probe_latency", "miss_penalty", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -448,12 +604,24 @@ TEST_CONFIGS = [
             "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+        "join_by_core": False,
+        "facet_by": {
+            "miss_penalty": [
+                {"flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
+                {"flags": ["!NeedProbe"], "label": "MissPenalty-Rels"},
+            ],
         },
     },
     {
-        "test":  "relbuf-gen-8",
-        "label": "Release 8",
-        "order": ["eviction_time", "miss_penalty", "reqtime_store"],
+        "test":  "hol-gen-8",
+        "label": "HoL",
+        "order": ["eviction_time", "probe_latency", "miss_penalty", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
@@ -462,6 +630,89 @@ TEST_CONFIGS = [
             "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+        "join_by_core": False,
+        "facet_by": {
+            "miss_penalty": [
+                {"flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
+                {"flags": ["!NeedProbe"], "label": "MissPenalty-Rels"},
+            ],
+        },
+    },
+    # {
+    #     "test":  "hol-8",
+    #     "label": "HoL 8",
+    #     "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   True,
+    #         "probe_latency":  True,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  True,
+    #     },
+    # },
+    {
+        "test":  "relbuf-gen-8",
+        "label": "Release 8",
+        "order": ["eviction_time", "miss_penalty", "reqtime_store", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+    },
+    {
+        "test":  "relbuf-gen-6",
+        "label": "Release 6",
+        "order": ["eviction_time", "miss_penalty", "reqtime_store", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
+        },
+    },
+    {
+        "test":  "relbuf-gen-4",
+        "label": "Release 4",
+        "order": ["eviction_time", "miss_penalty", "reqtime_store", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
+        "metrics": {
+            "miss_penalty":   True,
+            "eviction_time":  True,
+            "llc_residual":   True,
+            "probe_latency":  True,
+            "dram":           True,
+            "reqtime_load":   True,
+            "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
         },
     },
         # ---- Template for a new test ------------------------------------
@@ -492,39 +743,39 @@ TEST_CONFIGS = [
 ]
 
 ABLATION_CONFIGS = [
-    {
-        "test":   "nmshrs-4",
-        "label":  "nMSHRs Ablation",
-        "output": "nmshrs-ablation.svg",
-        "variant_a": "ctrl-stock-mshrs",
-        "variant_b": "ctrl-20-mshrs",
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  True,
-            "llc_residual":   False,
-            "probe_latency":  False,
-            "dram":           True,
-            "reqtime_load":   True,
-            "reqtime_store":  False,
-        },
-    },
-    {
-        "test":   "mempressure-4",
-        "label":  "DRAM Arbitration Ablation",
-        "output": "mempressure-ablation.svg",
-        "variant_a": "parrp-wb-splitprio",
-        "variant_b": "parrp-wb",
-        "data_start": 200_000,
-        "metrics": {
-            "miss_penalty":   True,
-            "eviction_time":  True,
-            "llc_residual":   False,
-            "probe_latency":  False,
-            "dram":           True,
-            "reqtime_load":   True,
-            "reqtime_store":  True,
-        },
-    },
+    # {
+    #     "test":   "nmshrs-4",
+    #     "label":  "nMSHRs Ablation",
+    #     "output": "nmshrs-ablation.svg",
+    #     "variant_a": "ctrl-stock-mshrs",
+    #     "variant_b": "ctrl-20-mshrs",
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   False,
+    #         "probe_latency":  False,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  False,
+    #     },
+    # },
+    # {
+    #     "test":   "mempressure-4",
+    #     "label":  "DRAM Arbitration Ablation",
+    #     "output": "mempressure-ablation.svg",
+    #     "variant_a": "parrp-wb-splitprio",
+    #     "variant_b": "parrp-wb",
+    #     "data_start": 200_000,
+    #     "metrics": {
+    #         "miss_penalty":   True,
+    #         "eviction_time":  True,
+    #         "llc_residual":   False,
+    #         "probe_latency":  False,
+    #         "dram":           True,
+    #         "reqtime_load":   True,
+    #         "reqtime_store":  True,
+    #     },
+    # },
     {
         "test":   "mempressure-gen-4",
         "label":  "DRAM Arbitration Ablation",
@@ -532,14 +783,20 @@ ABLATION_CONFIGS = [
         "variant_a": "parrp-wb-splitprio",
         "variant_b": "parrp-wb",
         "data_start": 200_000,
+        "order": ["reqtime_load", "reqtime_store", "miss_penalty", "dram", "dram_write", "relu_arb", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
-            "llc_residual":   False,
-            "probe_latency":  False,
+            "llc_residual":   True,
+            "probe_latency":  True,
             "dram":           True,
             "reqtime_load":   True,
             "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
         },
         "facet_by": {
             "miss_penalty": [
@@ -556,15 +813,20 @@ ABLATION_CONFIGS = [
         "variant_b": "ctrl-20-mshrs",
         "cores": [0], # only affects LSU metrics
         "data_start": 200_000,
-        "order": ["miss_penalty", "reqtime_load", "dram"],
+        "order": ["miss_penalty", "reqtime_load", "dram", "l1_occupancy", "llc_occupancy_acq", "llc_occupancy_rel"],
         "metrics": {
             "miss_penalty":   True,
             "eviction_time":  True,
-            "llc_residual":   False,
-            "probe_latency":  False,
+            "llc_residual":   True,
+            "probe_latency":  True,
             "dram":           True,
             "reqtime_load":   True,
-            "reqtime_store":  False,
+            "reqtime_store":  True,
+            "l1_occupancy":   True,
+            "llc_occupancy_acq": True,
+            "llc_occupancy_rel": True,
+            "dram_write":     True,
+            "relu_arb":       True,
         },
     },
 ]
@@ -652,6 +914,7 @@ def plot_one_test(cfg: dict, dirs: dict) -> None:
                     paths["l1_ctrl"], paths["l1_parrp"],
                     paths["llc_ctrl"], paths["llc_parrp"],
                     groups, data_start=data_start, label=test,
+                    join_by_core=cfg.get("join_by_core", True),
                 )
             elif metric == "probe_latency":
                 faceted = load_probe_latency_faceted(

@@ -92,6 +92,9 @@ def build_paths(test: str, data_dir: str) -> dict[str, str]:
     llc_ctrl, llc_parrp       - LLC completions
     probe_ctrl, probe_parrp   - probe latency records
     dram_ctrl, dram_parrp     - DRAM access records
+    llc_ocucp_ctrl, llc_occup_parrp - LLC MSHR occupancy time
+    dram_write_ctrl, dram_write_parrp - DRAM write access time
+    relu_arb_ctrl, relu_arb_parrp - Release unit arbitration time
     """
     d = data_dir
     return {
@@ -105,6 +108,12 @@ def build_paths(test: str, data_dir: str) -> dict[str, str]:
         "probe_parrp": f"{d}/{test}-parrp-wb-probes.csv",
         "dram_ctrl":   f"{d}/{test}-ctrl-dram.csv",
         "dram_parrp":  f"{d}/{test}-parrp-wb-dram.csv",
+        "llc_occup_ctrl": f"{d}/{test}-ctrl-llc-mshr.csv",
+        "llc_occup_parrp": f"{d}/{test}-parrp-wb-llc-mshr.csv",
+        "dram_write_ctrl": f"{d}/{test}-ctrl-dram-write.csv",
+        "dram_write_parrp": f"{d}/{test}-parrp-wb-dram-write.csv",
+        "relu_arb_ctrl": f"{d}/{test}-l1-ctrl_release_aru.csv",
+        "relu_arb_parrp": f"{d}/{test}-l1-parrp-wb_release_aru.csv",
     }
 
 
@@ -150,6 +159,14 @@ def build_paths_variants(test: str, variant_a: str, variant_b: str, data_dir: st
         "probe_b":  f"{d}/{test}-{variant_b}-probes.csv",
         "dram_a":   f"{d}/{test}-{variant_a}-dram.csv",
         "dram_b":   f"{d}/{test}-{variant_b}-dram.csv",
+        "dram_w_a":   f"{d}/{test}-{variant_a}-dram-write.csv",
+        "dram_w_b":   f"{d}/{test}-{variant_b}-dram-write.csv",
+        "llc_occup_a": f"{d}/{test}-{variant_a}-llc-mshr.csv",
+        "llc_occup_b": f"{d}/{test}-{variant_b}-llc-mshr.csv",
+        "dram_write_a": f"{d}/{test}-{variant_a}-dram-write.csv",
+        "dram_write_b": f"{d}/{test}-{variant_b}-dram-write.csv",
+        "relu_arb_a": f"{d}/{test}-l1-{variant_a}_release_aru.csv",
+        "relu_arb_b": f"{d}/{test}-l1-{variant_b}_release_aru.csv",
     }
 
 def reqtime_csv_path(test_variant: str, core: int, cache_type: str,
@@ -354,6 +371,80 @@ def load_dram(filepath: str, data_start: int = DEFAULT_DATA_START) -> np.ndarray
 
     return np.concatenate(chunks) if chunks else np.array([], dtype=np.uint16)
 
+def load_dram_write(filepath: str, data_start: int = DEFAULT_DATA_START) -> np.ndarray:
+    """
+    DRAM write access latency (uint16), filtered by `data_start`.
+    """
+    chunks = []
+    for chunk in pd.read_csv(
+        filepath, usecols=["StartCycle", "Latency"], chunksize=CHUNK_SIZE
+    ):
+        mask   = chunk["StartCycle"].to_numpy(dtype=np.uint64) >= data_start
+        values = chunk["Latency"].to_numpy(dtype=np.uint16)[mask]
+        if len(values):
+            chunks.append(values)
+
+    return np.concatenate(chunks) if chunks else np.array([], dtype=np.uint16)
+
+def load_llc_occup_acq(filepath: str, data_start: int = DEFAULT_DATA_START) -> np.ndarray:
+    """
+    DRAM access latency (uint16), filtered by `data_start`.
+    """
+    chunks = []
+    for chunk in pd.read_csv(
+        filepath, usecols=["Opcode", "StartCycle", "Occupancy"], chunksize=CHUNK_SIZE
+    ):
+        mask   = (chunk["StartCycle"].to_numpy(dtype=np.uint64) >= data_start) & (chunk["Opcode"] == "AcquireBlock")
+        values = chunk["Occupancy"].to_numpy(dtype=np.uint16)[mask]
+        if len(values):
+            chunks.append(values)
+
+    return np.concatenate(chunks) if chunks else np.array([], dtype=np.uint16)
+
+def load_llc_occup_rel(filepath: str, data_start: int = DEFAULT_DATA_START) -> np.ndarray:
+    """
+    DRAM access latency (uint16), filtered by `data_start`.
+    """
+    chunks = []
+    for chunk in pd.read_csv(
+        filepath, usecols=["Opcode", "StartCycle", "Occupancy"], chunksize=CHUNK_SIZE
+    ):
+        mask   = (chunk["StartCycle"].to_numpy(dtype=np.uint64) >= data_start) & (((chunk["Opcode"] == "ReleaseData") | (chunk["Opcode"] == "Release")))
+        values = chunk["Occupancy"].to_numpy(dtype=np.uint16)[mask]
+        if len(values):
+            chunks.append(values)
+
+    return np.concatenate(chunks) if chunks else np.array([], dtype=np.uint16)
+
+def load_l1_occup(filepath: str, data_start: int = DEFAULT_DATA_START) -> np.ndarray:
+    """
+    DRAM access latency (uint16), filtered by `data_start`.
+    """
+    chunks = []
+    for chunk in pd.read_csv(
+        filepath, usecols=["StartCycle", "Latency"], chunksize=CHUNK_SIZE
+    ):
+        mask   = chunk["StartCycle"].to_numpy(dtype=np.uint64) >= data_start
+        values = chunk["Latency"].to_numpy(dtype=np.uint16)[mask]
+        if len(values):
+            chunks.append(values)
+
+    return np.concatenate(chunks) if chunks else np.array([], dtype=np.uint16)
+
+def load_evict_queue(filepath: str, data_start: int = DEFAULT_DATA_START) -> np.ndarray:
+    """
+    DRAM access latency (uint16), filtered by `data_start`.
+    """
+    chunks = []
+    for chunk in pd.read_csv(
+        filepath, usecols=["StartCycle", "RelUArbTime"], chunksize=CHUNK_SIZE
+    ):
+        mask   = chunk["StartCycle"].to_numpy(dtype=np.uint64) >= data_start
+        values = chunk["RelUArbTime"].to_numpy(dtype=np.uint16)[mask]
+        if len(values):
+            chunks.append(values)
+
+    return np.concatenate(chunks) if chunks else np.array([], dtype=np.uint16)
 
 def load_reqtimes(
     test_variant: str,
@@ -504,7 +595,8 @@ def load_probe_df(filepath: str, data_start: int = DEFAULT_DATA_START) -> pd.Dat
 
 
 def attach_state_miss_penalty(
-    l1_df: pd.DataFrame, llc_df: pd.DataFrame, label: str = ""
+    l1_df: pd.DataFrame, llc_df: pd.DataFrame, label: str = "",
+    join_by_core: bool = True,
 ) -> pd.DataFrame:
     """Join each L1 miss row to the nearest LLC transaction for the same
     (Address, Core) at or after the L1 request's StartCycle."""
@@ -514,21 +606,23 @@ def attach_state_miss_penalty(
     l1["Address"] = normalize_hex(l1["Address"])
     l1["Core"] = normalize_hex(l1["Core"])
     llc["Address"] = normalize_hex(llc["Address"])
-    llc["Core"] = normalize_hex(llc["SourceID"]).map(
-        lambda sid: SOURCE_ID_MAP.get(sid, (None, None))[0]
-    )
-    llc = llc.dropna(subset=["Core"]).copy()
-    llc["Core"] = llc["Core"].astype(np.int64)
+
+    if join_by_core:
+        llc["Core"] = normalize_hex(llc["SourceID"]).map(
+            lambda sid: SOURCE_ID_MAP.get(sid, (None, None))[0]
+        )
+        llc = llc.dropna(subset=["Core"]).copy()
+        llc["Core"] = llc["Core"].astype(np.int64)
+        by = ["Address", "Core"]
+    else:
+        by = ["Address"]
 
     l1 = l1.sort_values("StartCycle").reset_index(drop=True)
     llc = llc.sort_values("StartCycle").reset_index(drop=True)
 
     merged = pd.merge_asof(
-        l1, llc,
-        on="StartCycle",
-        by=["Address", "Core"],
-        direction="forward",
-        suffixes=("", "_llc"),
+        l1, llc, on="StartCycle", by=by,
+        direction="forward", suffixes=("", "_llc"),
     )
 
     unmatched = merged["Opcode"].isna()
@@ -587,7 +681,9 @@ def apply_facet_group(df: pd.DataFrame, group: dict) -> pd.DataFrame:
     """group = {"cores": [...], "flags": [...], "label": "..."}
     flags entries matching FLAG_COLUMNS are AND'd as boolean filters;
     anything else is matched against Opcode."""
-    mask = df["Core"].isin(group["cores"])
+    mask = pd.Series(True, index=df.index)
+    if group.get("cores"):
+        mask &= df["Core"].isin(group["cores"])
     for flag in group["flags"]:
         negate = flag.startswith("!")
         key = flag[1:] if negate else flag
@@ -609,14 +705,15 @@ def load_miss_penalty_faceted(
     facet_groups: list[dict],
     data_start: int = DEFAULT_DATA_START,
     label: str = "",
+    join_by_core: bool = True
 ) -> list[tuple[str, np.ndarray, np.ndarray]]:
     l1_ctrl = load_l1_miss_penalty_df(l1_ctrl_path, data_start)
     l1_mod = load_l1_miss_penalty_df(l1_mod_path, data_start)
     llc_ctrl = load_llc_full_df(llc_ctrl_path)
     llc_mod = load_llc_full_df(llc_mod_path)
 
-    joined_ctrl = attach_state_miss_penalty(l1_ctrl, llc_ctrl, label=f"{label}-ctrl")
-    joined_mod = attach_state_miss_penalty(l1_mod, llc_mod, label=f"{label}-mod")
+    joined_ctrl = attach_state_miss_penalty(l1_ctrl, llc_ctrl, label=f"{label}-ctrl", join_by_core=join_by_core)
+    joined_mod = attach_state_miss_penalty(l1_mod, llc_mod, label=f"{label}-mod", join_by_core=join_by_core)
 
     results = []
     for group in facet_groups:
