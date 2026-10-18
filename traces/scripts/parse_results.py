@@ -285,7 +285,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 sink_key = (src, opcode)
 
                 last = last_completion.get(sink_key)
-                if last is not None and (cycle - last) <= COMPLETION_COOLDOWN:
+                if (opcode == "ReleaseData" 
+                        and last is not None 
+                        and (cycle - last) <= COMPLETION_COOLDOWN):
                     if debug:
                         print(f"[line {line_no}] Ignoring tail beat after completion for {sink_key}")
                     continue
