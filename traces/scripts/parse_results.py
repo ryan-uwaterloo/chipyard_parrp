@@ -83,7 +83,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # --- State maps ---
     sink_times = {}       # (source, opcode) -> start_cycle
     sink_addrs = {}
-    request_meta = {}     # source -> metadata dict
+    request_meta = defaultdict(deque)   # source -> deque[metadata dict], oldest first
     last_completion = {}  # (source, opcode) -> last completion cycle
     last_source_d = {}    # (source, source_d_opcode) -> last Source D cycle seen
     results = []          # [(source, opcode, start, end, latency, metadata, stalls, source_d_cycle)]
@@ -178,6 +178,52 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
 
     DUPLICATE_COMPLETION_WINDOW = 2
     COMPLETION_COOLDOWN = 4
+
+    # -----------------------------------------------------------------------
+    # In-flight overlap handling
+    #
+    # An L1 can free its MSHR (and reuse the source ID) before the LLC has logged
+    # "Request completed" for the previous request with that source, so several
+    # requests with the same (source, opcode) can be in flight at once. They are
+    # kept in arrival order and each completion retires the oldest.
+    #   sink_times[key]        = oldest in-flight Sink arrival; sink_addrs[key] its address
+    #   sink_backlog[key]      = newer arrivals queued behind it
+    #   request_meta[src]      = deque of "Req in MSHR" metadata, oldest first
+    #   llc_mshr_start[src]    = deque of LLC MSHR starts, oldest first
+    # Only single-beat opcodes are queued (every Sink A / Release is a new request).
+    # ReleaseData is multi-beat, so it keeps first-beat-only + the cooldown above.
+    # -----------------------------------------------------------------------
+    SINGLE_BEAT_OPCODES = {"AcquireBlock", "AcquirePerm", "Release"}
+    sink_backlog = defaultdict(deque)   # (src, opcode) -> deque[(cycle, addr)]
+    sink_claims  = defaultdict(int)     # (src, opcode) -> in-flight sinks already paired with a meta line
+
+    def claim_sink_for_meta(src, cycle):
+        """Pair a 'Req in MSHR' line with the oldest in-flight Sink request of this
+        source that has not been paired yet. Returns (start_cycle, addr) or None."""
+        best = None
+        for key in [k for k in sink_times if k[0] == src]:
+            entries = [(sink_times[key], sink_addrs.get(key))] + list(sink_backlog.get(key, ()))
+            c = sink_claims[key]
+            if c < len(entries) and entries[c][0] <= cycle and (best is None or entries[c][0] < best[0][0]):
+                best = (entries[c], key)
+        if best is None:
+            return None
+        sink_claims[best[1]] += 1
+        return best[0]
+
+    def advance_sink(key):
+        """Retire the oldest in-flight Sink request for key and promote the next."""
+        del sink_times[key]
+        sink_addrs.pop(key, None)
+        sink_claims[key] = max(0, sink_claims[key] - 1)
+        q = sink_backlog.get(key)
+        if q:
+            cyc, a = q.popleft()
+            sink_times[key] = cyc
+            if a is not None:
+                sink_addrs[key] = a
+            if not q:
+                del sink_backlog[key]
 
     with open(filepath, "r") as f:
         for line_no, line in enumerate(f, 1):
@@ -309,6 +355,12 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         sink_addrs[sink_key] = addr
                     if debug:
                         print(f"[line {line_no}] Sink {sink_type}: cycle={cycle}, opcode={opcode}, source=0x{src:X}")
+                elif opcode in SINGLE_BEAT_OPCODES:
+                    sink_backlog[sink_key].append((cycle, addr))
+                    if debug:
+                        print(f"[line {line_no}] Sink {sink_type}: cycle={cycle}, opcode={opcode}, "
+                              f"source=0x{src:X} queued behind in-flight request "
+                              f"(depth={len(sink_backlog[sink_key])})")
                 else:
                     if debug:
                         print(f"[line {line_no}] Duplicate Sink {sink_type} for source=0x{src:X}, opcode={opcode}")
@@ -335,15 +387,10 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                 # compute SetBlockTime = MSHR_entry_cycle - sink_arrival_cycle.
                 # We search sink_times for any opcode matching this source because
                 # the MSHR line doesn't carry the opcode directly.
-                candidates = [(t, op) for (s, op), t in sink_times.items() if s == src and t <= cycle]
-                if candidates:
-                    sink_start, matched_op = max(candidates, key=lambda x: x[0])
-                    address = sink_addrs.get((src, matched_op))
-                else:
-                    sink_start = None
-                    address = None
+                claim = claim_sink_for_meta(src, cycle)
+                sink_start, address = claim if claim else (None, None)
 
-                request_meta[src] = {
+                meta_entry = {
                     "need_dram":  dram,
                     "need_probe": need_probe,
                     "evicting":   evicting,
@@ -355,6 +402,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     "address":    address,
                     "node_type":  node_type,     # NEW
                 }
+                request_meta[src].append(meta_entry)
 
                 # NEW: LLC MSHR occupancy start (keyed by source)
                 llc_mshr_start[src].append({
@@ -388,7 +436,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         )
 
                 if debug:
-                    print(f"[line {line_no}] Metadata captured for source=0x{src:X}: {request_meta[src]}")
+                    print(f"[line {line_no}] Metadata captured for source=0x{src:X}: {meta_entry}")
                 continue
 
             # --- Match ReleaseData stalls ---
@@ -462,6 +510,13 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                         f"source=0x{src:X}, opcode={opcode}, cycle={cycle}"
                     )
 
+                # Retire the oldest MSHR metadata for this source (FIFO, kept aligned with
+                # the LLC MSHR queue above regardless of sink/Source D matching below).
+                meta_q = request_meta.get(src)
+                meta_info = meta_q.popleft() if meta_q else {}
+                if meta_q is not None and len(meta_q) == 0:
+                    del request_meta[src]
+
                 # Skip duplicate completions within short window
                 last = last_completion.get(sink_key)
                 if last is not None and (cycle - last) < DUPLICATE_COMPLETION_WINDOW:
@@ -488,7 +543,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                     stall_cycles = stall_info["count"] if stall_info else 0
 
                 latency = cycle - start_cycle
-                meta = request_meta.get(src, {})
+                meta = meta_info
 
                 if opcode in RELEASE_OPCODES:
                     # Source D (ReleaseAck) may arrive before or after completion.
@@ -519,7 +574,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                             print(f"[line {line_no}] Deferred Release completion for "
                                   f"source=0x{src:X}, awaiting ReleaseAck")
 
-                    del sink_times[sink_key]
+                    advance_sink(sink_key)
                     last_completion[sink_key] = cycle
 
                 else:
@@ -564,7 +619,7 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
                               f"stalls={stall_cycles}, source_d={source_d_cycle}, "
                               f"source_d_to_complete={source_d_to_complete}, metadata={meta}")
 
-                    del sink_times[sink_key]
+                    advance_sink(sink_key)
                     last_completion[sink_key] = cycle
 
             # ---------------------------------------------------------------
@@ -850,7 +905,8 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # --- Summary stats ---
     print(f"\nSummary:")
     print(f"  {len(results)} completions matched")
-    print(f"  {len(sink_times)} sinks still pending")
+    print(f"  {len(sink_times)} sinks still pending "
+          f"(+ {sum(len(q) for q in sink_backlog.values())} queued behind them)")
     print(f"  Sink C total: {total_sink_c} | accepted: {accepted_sink_c} | ignored: {ignored_sink_c}")
 
     # --- L1 CSV output ---
@@ -919,7 +975,9 @@ def parse_log(filepath, csv_out=None, l1_out=None, debug=False):
     # NEW: LLC MSHR + DRAM summaries
     print(f"\nLLC MSHR Occupancy Summary:")
     print(f"  {len(llc_mshr_results)} requests completed")
-    print(f"  {len(llc_mshr_start)} still pending (no completion seen)")
+    print(f"  {sum(len(q) for q in llc_mshr_start.values())} still pending (no completion seen)")
+    print(f"  {sum(len(q) for q in request_meta.values())} MSHR metadata entries left queued "
+          f"(large numbers mean completions are missing and the queues have drifted)")
     if llc_mshr_overwritten:
         print(f"  [WARN] {llc_mshr_overwritten} 'Req in MSHR' starts were overwritten before a "
               f"completion was seen (duplicate lines or missing completions)")
