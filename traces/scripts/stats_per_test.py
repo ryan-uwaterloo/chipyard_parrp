@@ -27,8 +27,6 @@ from loaders import (
     DEFAULT_DATA_START,
     build_paths,
     build_paths_variants,
-    load_miss_penalty_faceted,
-    load_probe_latency_faceted,
 )
 
 
@@ -48,28 +46,21 @@ def collect_slots(cfg: dict, dirs: dict, ablation: bool):
         va, vb = cfg["variant_a"], cfg["variant_b"]
         paths  = build_paths_variants(test, va, vb, dirs["data"])
         mdefs  = ppt.ABLATION_METRIC_DEFS
-        k1, k2 = ("l1_a", "l1_b"), ("llc_a", "llc_b")
-        kp     = ("probe_a", "probe_b")
+        keys   = ppt.FACET_PATH_KEYS["ablation"]
     else:
         paths  = build_paths(test, dirs["data"])
         mdefs  = ppt.METRIC_DEFS
-        k1, k2 = ("l1_ctrl", "l1_parrp"), ("llc_ctrl", "llc_parrp")
-        kp     = ("probe_ctrl", "probe_parrp")
+        keys   = ppt.FACET_PATH_KEYS["ctrl_parrp"]
 
     slots = []
     for metric in active:
         if metric in facet_by:
-            groups = facet_by[metric]
-            if metric == "miss_penalty":
-                slots.extend(load_miss_penalty_faceted(
-                    paths[k1[0]], paths[k1[1]], paths[k2[0]], paths[k2[1]],
-                    groups, data_start=data_start, label=test))
-            elif metric == "probe_latency":
-                slots.extend(load_probe_latency_faceted(
-                    paths[kp[0]], paths[kp[1]], paths[k2[0]], paths[k2[1]],
-                    groups, data_start=data_start, label=test))
-            else:
-                raise NotImplementedError(f"facet_by not wired up for '{metric}'")
+            # Same dispatch as plot_one_test / plot_ablation_test, so every
+            # metric facetable there (miss_penalty, probe_latency, l1_occupancy,
+            # llc_occupancy_acq/rel) is also facetable here.
+            slots.extend(ppt._load_faceted(
+                metric, facet_by[metric], paths, keys, test,
+                data_start, cfg.get("join_by_core", True)))
         else:
             mdef = mdefs[metric]
             a, b = mdef["loader"](
@@ -127,21 +118,21 @@ def report_config(cfg, dirs, ablation, out_lines, csv_rows):
 
     slots = collect_slots(cfg, dirs, ablation)
 
-    out_lines.append("=" * 100)
+    out_lines.append("=" * 108)
     out_lines.append(header)
-    out_lines.append("=" * 100)
+    out_lines.append("=" * 108)
     out_lines.append(
-        f"{'Metric':<24}{'Variant':<22}{'N':>10}"
+        f"{'Metric':<32}{'Variant':<22}{'N':>10}"
         + "".join(f"{k:>11}" for k in STAT_KEYS[1:])
     )
-    out_lines.append("-" * 100)
+    out_lines.append("-" * 108)
 
     for title, first, second in slots:
         flat = title.replace("\n", " ")
         s1, s2 = summarize(first), summarize(second)
         for name, s in zip(names, (s1, s2)):
             out_lines.append(
-                f"{flat:<24}{name:<22}{s['n']:>10,}"
+                f"{flat:<32}{name:<22}{s['n']:>10,}"
                 + "".join(fmt(s[k]) for k in STAT_KEYS[1:])
             )
             csv_rows.append({
@@ -150,7 +141,7 @@ def report_config(cfg, dirs, ablation, out_lines, csv_rows):
                 "metric": flat, "variant": name, **s,
             })
         out_lines.append(
-            f"{'':<24}{'Δ (2nd vs 1st)':<22}{'':>10}"
+            f"{'':<32}{'Δ (2nd vs 1st)':<22}{'':>10}"
             f"{'':>11}{pct(s2['mean'], s1['mean']):>11}"
             f"{pct(s2['median'], s1['median']):>11}"
             f"{pct(s2['p99'], s1['p99']):>11}"

@@ -44,8 +44,13 @@ from loaders import (
     load_llc_occup_acq,
     load_llc_occup_rel,
     load_evict_queue,
+    load_miss_penalty_faceted,
+    load_probe_latency_faceted,
+    load_l1_occup_faceted,
+    load_llc_occup_faceted,
     get_cores,
     CACHE_TYPES,
+    DEFAULT_DATA_START,
 )
 from violin_helpers import draw_violin_pair
 
@@ -238,8 +243,8 @@ ABLATION_METRIC_DEFS = {
         ),
     },
     "dram_write": {
-        "ylabel": "DRAM Access Time (cycles)",
-        "title":  "DRAM Access Time",
+        "ylabel": "DRAM Write Access Time (cycles)",
+        "title":  "DRAM Write Access Time",
         "loader": lambda p, cfg, dirs: (
             load_dram_write(p["dram_w_a"], cfg["data_start"]),
             load_dram_write(p["dram_w_b"], cfg["data_start"]),
@@ -315,6 +320,56 @@ DEFAULT_METRIC_ORDER = [
     "dram", # Acquire(SourceA) -> GrantData(SinkD)
 ]
 
+# ---- facet_by dispatch ------------------------------------------------
+# (first-variant key, second-variant key) into the paths dict, per CSV family.
+FACET_PATH_KEYS = {
+    "ctrl_parrp": {
+        "l1":        ("l1_ctrl", "l1_parrp"),
+        "llc":       ("llc_ctrl", "llc_parrp"),
+        "probe":     ("probe_ctrl", "probe_parrp"),
+        "llc_occup": ("llc_occup_ctrl", "llc_occup_parrp"),
+    },
+    "ablation": {
+        "l1":        ("l1_a", "l1_b"),
+        "llc":       ("llc_a", "llc_b"),
+        "probe":     ("probe_a", "probe_b"),
+        "llc_occup": ("llc_occup_a", "llc_occup_b"),
+    },
+}
+
+
+def _load_faceted(
+    metric: str, groups: list[dict], paths: dict, keys: dict,
+    test: str, data_start: int, join_by_core: bool,
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    """Shared facet_by dispatch for plot_one_test and plot_ablation_test."""
+    l1a, l1b = keys["l1"]
+    llca, llcb = keys["llc"]
+
+    if metric == "miss_penalty":
+        return load_miss_penalty_faceted(
+            paths[l1a], paths[l1b], paths[llca], paths[llcb],
+            groups, data_start=data_start, label=test, join_by_core=join_by_core,
+        )
+    if metric == "l1_occupancy":
+        return load_l1_occup_faceted(
+            paths[l1a], paths[l1b], paths[llca], paths[llcb],
+            groups, data_start=data_start, label=test, join_by_core=join_by_core,
+        )
+    if metric == "probe_latency":
+        pa, pb = keys["probe"]
+        return load_probe_latency_faceted(
+            paths[pa], paths[pb], paths[llca], paths[llcb],
+            groups, data_start=data_start, label=test,
+        )
+    if metric in ("llc_occupancy_acq", "llc_occupancy_rel"):
+        oa, ob = keys["llc_occup"]
+        return load_llc_occup_faceted(
+            paths[oa], paths[ob], groups,
+            kind=metric.rsplit("_", 1)[1], data_start=data_start,
+        )
+    raise NotImplementedError(f"facet_by not wired up for '{metric}' yet")
+
 
 def _load_reqtime_agg(
     test: str,
@@ -389,8 +444,15 @@ def _load_reqtime_agg_variants(
 #                           Omit to use DEFAULT_METRIC_ORDER (reqtimes first).
 # facet_by   : dict        – {metric_key: [group, ...]} — split a metric into multiple
 #                            x-axis slots instead of one aggregate slot. Currently supported
-#                            for "miss_penalty" and "probe_latency" only; both require the
-#                            LLC CSV's Address/state columns (see loaders.attach_state_*).
+#                            for "miss_penalty", "probe_latency", "l1_occupancy",
+#                            "llc_occupancy_acq" and "llc_occupancy_rel".
+#                            miss_penalty / l1_occupancy / probe_latency join against the LLC CSV's
+#                            Address/state columns (see loaders.attach_state_*);
+#                            llc_occupancy_* read the state flags straight from the -llc-mshr CSV.
+#                            "Load"/"Store" flags are only valid for llc_occupancy_acq (not _rel).
+#                            "cores" is only meaningful for 4-core tests (SOURCE_ID_MAP); omit it
+#                            for 6/8-core tests, and set join_by_core=False in the test config
+#                            for miss_penalty / l1_occupancy there.
 #                            Each group is:
 #                              {
 #                                "cores": [int, ...],   – core IDs to include (OR'd together)
@@ -414,22 +476,6 @@ def _load_reqtime_agg_variants(
 # To disable a metric globally for all tests, set its bool to False here
 # and you never need to touch the loader code.
 TEST_CONFIGS = [
-    # {
-    #     "test":  "probe-4",
-    #     "label": "Probe",
-    #     # "order": ["probe_latency", "miss_penalty"],
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  False,
-    #         "llc_residual":   False,
-    #         "probe_latency":  True,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  True,
-    #     },
-    #     # "output": "probe-4.svg",   # uncomment to override default
-    #     # "num_sets": 64,
-    # },
     {
         "test":  "probe-gen-4",
         "label": "Probe",
@@ -453,6 +499,15 @@ TEST_CONFIGS = [
             "miss_penalty": [
                 {"flags": ["Store"], "label": "MissPenalty-Stores"},
                 {"flags": ["Load"], "label": "MissPenalty-Loads"},
+            ],
+            "l1_occupancy": [
+                {"flags": ["Store"], "label": "L1MSHR-Stores"},
+                {"flags": ["Load"], "label": "L1MSHR-Loads"},
+            ],
+            # Load/Store is only meaningful for acquires, so releases stay aggregate
+            "llc_occupancy_acq": [
+                {"flags": ["Store"], "label": "LLCMSHR-Stores"},
+                {"flags": ["Load"], "label": "LLCMSHR-Loads"},
             ],
         },
     },
@@ -480,6 +535,15 @@ TEST_CONFIGS = [
                 {"flags": ["Store"], "label": "MissPenalty-Stores"},
                 {"flags": ["Load"], "label": "MissPenalty-Loads"},
             ],
+            "l1_occupancy": [
+                {"flags": ["Store"], "label": "L1MSHR-Stores"},
+                {"flags": ["Load"], "label": "L1MSHR-Loads"},
+            ],
+            # Load/Store is only meaningful for acquires, so releases stay aggregate
+            "llc_occupancy_acq": [
+                {"flags": ["Store"], "label": "LLCMSHR-Stores"},
+                {"flags": ["Load"], "label": "LLCMSHR-Loads"},
+            ],
         },
     },
     {
@@ -506,66 +570,17 @@ TEST_CONFIGS = [
                 {"flags": ["Store"], "label": "MissPenalty-Stores"},
                 {"flags": ["Load"], "label": "MissPenalty-Loads"},
             ],
+            "l1_occupancy": [
+                {"flags": ["Store"], "label": "L1MSHR-Stores"},
+                {"flags": ["Load"], "label": "L1MSHR-Loads"},
+            ],
+            # Load/Store is only meaningful for acquires, so releases stay aggregate
+            "llc_occupancy_acq": [
+                {"flags": ["Store"], "label": "LLCMSHR-Stores"},
+                {"flags": ["Load"], "label": "LLCMSHR-Loads"},
+            ],
         },
     },
-    # {
-    #     "test":  "relbuf-4",
-    #     "label": "RelBuf",
-    #     "data_start": 50_000,
-    #     "order": ["eviction_time", "miss_penalty", "reqtime_store", "dram"],
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   False,
-    #         "probe_latency":  False,
-    #         "dram":           True,
-    #         "reqtime_load":   False,
-    #         "reqtime_store":  True,
-    #     },
-    # },
-    # {
-    #     "test":  "mempressure-4",
-    #     "label": "MemPressure",
-    #     "data_start": 200_000,
-    #     "order": ["dram", "miss_penalty", "eviction_time", "reqtime_load"],
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   False,
-    #         "probe_latency":  False,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  False,
-    #     },
-    # },
-    # {
-    #     "test":  "nmshrs-4",
-    #     "label": "nMSHRs",
-    #     # "order": ["reqtime_load", "miss_penalty", "dram"]
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  False,
-    #         "llc_residual":   False,
-    #         "probe_latency":  False,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  False,
-    #     },
-    # },
-    # {
-    #     "test":  "hol-4",
-    #     "label": "HoL",
-    #     "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   True,
-    #         "probe_latency":  True,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  True,
-    #     },
-    # },
     {
         "test":  "hol-gen-4",
         "label": "HoL",
@@ -589,6 +604,14 @@ TEST_CONFIGS = [
             "miss_penalty": [
                 {"flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
                 {"flags": ["!NeedProbe"], "label": "MissPenalty-Rels"},
+            ],
+            "l1_occupancy": [
+                {"flags": ["NeedProbe"], "label": "L1MSHR-Probes"},
+                {"flags": ["!NeedProbe"], "label": "L1MSHR-Rels"},
+            ],
+            "llc_occupancy_acq": [
+                {"flags": ["NeedProbe"], "label": "LLCAcq-Probes"},
+                {"flags": ["!NeedProbe"], "label": "LLCAcq-NoProbe"},
             ],
         },
     },
@@ -616,6 +639,14 @@ TEST_CONFIGS = [
                 {"flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
                 {"flags": ["!NeedProbe"], "label": "MissPenalty-Rels"},
             ],
+            "l1_occupancy": [
+                {"flags": ["NeedProbe"], "label": "L1MSHR-Probes"},
+                {"flags": ["!NeedProbe"], "label": "L1MSHR-Rels"},
+            ],
+            "llc_occupancy_acq": [
+                {"flags": ["NeedProbe"], "label": "LLCAcq-Probes"},
+                {"flags": ["!NeedProbe"], "label": "LLCAcq-NoProbe"},
+            ],
         },
     },
     {
@@ -642,22 +673,16 @@ TEST_CONFIGS = [
                 {"flags": ["NeedProbe"], "label": "MissPenalty-Probes"},
                 {"flags": ["!NeedProbe"], "label": "MissPenalty-Rels"},
             ],
+            "l1_occupancy": [
+                {"flags": ["NeedProbe"], "label": "L1MSHR-Probes"},
+                {"flags": ["!NeedProbe"], "label": "L1MSHR-Rels"},
+            ],
+            "llc_occupancy_acq": [
+                {"flags": ["NeedProbe"], "label": "LLCAcq-Probes"},
+                {"flags": ["!NeedProbe"], "label": "LLCAcq-NoProbe"},
+            ],
         },
     },
-    # {
-    #     "test":  "hol-8",
-    #     "label": "HoL 8",
-    #     "order": ["probe_latency", "miss_penalty", "eviction_time", "dram"],
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   True,
-    #         "probe_latency":  True,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  True,
-    #     },
-    # },
     {
         "test":  "relbuf-gen-8",
         "label": "Release 8",
@@ -743,39 +768,6 @@ TEST_CONFIGS = [
 ]
 
 ABLATION_CONFIGS = [
-    # {
-    #     "test":   "nmshrs-4",
-    #     "label":  "nMSHRs Ablation",
-    #     "output": "nmshrs-ablation.svg",
-    #     "variant_a": "ctrl-stock-mshrs",
-    #     "variant_b": "ctrl-20-mshrs",
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   False,
-    #         "probe_latency":  False,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  False,
-    #     },
-    # },
-    # {
-    #     "test":   "mempressure-4",
-    #     "label":  "DRAM Arbitration Ablation",
-    #     "output": "mempressure-ablation.svg",
-    #     "variant_a": "parrp-wb-splitprio",
-    #     "variant_b": "parrp-wb",
-    #     "data_start": 200_000,
-    #     "metrics": {
-    #         "miss_penalty":   True,
-    #         "eviction_time":  True,
-    #         "llc_residual":   False,
-    #         "probe_latency":  False,
-    #         "dram":           True,
-    #         "reqtime_load":   True,
-    #         "reqtime_store":  True,
-    #     },
-    # },
     {
         "test":   "mempressure-gen-4",
         "label":  "DRAM Arbitration Ablation",
@@ -801,7 +793,11 @@ ABLATION_CONFIGS = [
         "facet_by": {
             "miss_penalty": [
                 {"cores": [0], "flags": [], "label": "MissPenalty-C0"},
-                {"cores": [1, 2, 3], "flags": ["NeedDRAM"], "label": "MissPenalty-Traffic"},
+                {"cores": [1, 2, 3], "flags": [], "label": "MissPenalty-Traffic"},
+            ],
+            "l1_occupancy": [
+                {"cores": [0], "flags": [], "label": "L1MSHR-C0"},
+                {"cores": [1, 2, 3], "flags": [], "label": "L1MSHR-Traffic"},
             ],
         },
     },
@@ -882,10 +878,6 @@ def plot_one_test(cfg: dict, dirs: dict) -> None:
     output  = cfg.get("output", f"{test}.svg")
     facet_by = cfg.get("facet_by", {})
 
-    from loaders import (
-        DEFAULT_DATA_START,
-        load_miss_penalty_faceted, load_probe_latency_faceted,
-    )
     data_start = cfg.get("data_start", DEFAULT_DATA_START)
 
     order  = cfg.get("order", DEFAULT_METRIC_ORDER)
@@ -909,21 +901,10 @@ def plot_one_test(cfg: dict, dirs: dict) -> None:
         if metric in facet_by:
             groups = facet_by[metric]
             print(f"  Loading {metric} (faceted, {len(groups)} groups) …")
-            if metric == "miss_penalty":
-                faceted = load_miss_penalty_faceted(
-                    paths["l1_ctrl"], paths["l1_parrp"],
-                    paths["llc_ctrl"], paths["llc_parrp"],
-                    groups, data_start=data_start, label=test,
-                    join_by_core=cfg.get("join_by_core", True),
-                )
-            elif metric == "probe_latency":
-                faceted = load_probe_latency_faceted(
-                    paths["probe_ctrl"], paths["probe_parrp"],
-                    paths["llc_ctrl"], paths["llc_parrp"],
-                    groups, data_start=data_start, label=test,
-                )
-            else:
-                raise NotImplementedError(f"facet_by not wired up for '{metric}' yet")
+            faceted = _load_faceted(
+                metric, groups, paths, FACET_PATH_KEYS["ctrl_parrp"], test,
+                data_start, cfg.get("join_by_core", True),
+            )
             slots.extend(faceted)
         else:
             mdef = METRIC_DEFS[metric]
@@ -977,10 +958,6 @@ def plot_ablation_test(cfg: dict, dirs: dict) -> None:
     legend_labels = cfg.get("legend_labels", (variant_a, variant_b))
     facet_by      = cfg.get("facet_by", {})
 
-    from loaders import (
-        DEFAULT_DATA_START,
-        load_miss_penalty_faceted, load_probe_latency_faceted,
-    )
     data_start = cfg.get("data_start", DEFAULT_DATA_START)
 
     order  = cfg.get("order", DEFAULT_METRIC_ORDER)
@@ -1004,20 +981,10 @@ def plot_ablation_test(cfg: dict, dirs: dict) -> None:
         if metric in facet_by:
             groups = facet_by[metric]
             print(f"  Loading {metric} (faceted, {len(groups)} groups) …")
-            if metric == "miss_penalty":
-                faceted = load_miss_penalty_faceted(
-                    paths["l1_a"], paths["l1_b"],
-                    paths["llc_a"], paths["llc_b"],
-                    groups, data_start=data_start, label=test,
-                )
-            elif metric == "probe_latency":
-                faceted = load_probe_latency_faceted(
-                    paths["probe_a"], paths["probe_b"],
-                    paths["llc_a"], paths["llc_b"],
-                    groups, data_start=data_start, label=test,
-                )
-            else:
-                raise NotImplementedError(f"facet_by not wired up for '{metric}' yet")
+            faceted = _load_faceted(
+                metric, groups, paths, FACET_PATH_KEYS["ablation"], test,
+                data_start, cfg.get("join_by_core", True),
+            )
             slots.extend(faceted)
         else:
             mdef = ABLATION_METRIC_DEFS[metric]

@@ -570,15 +570,26 @@ def normalize_hex(series: pd.Series) -> pd.Series:
     return series.astype(str).str.strip().apply(lambda s: int(s, 16)).astype(np.int64)
 
 
-def load_l1_miss_penalty_df(filepath: str, data_start: int = DEFAULT_DATA_START) -> pd.DataFrame:
+def load_l1_miss_penalty_df(
+    filepath: str, data_start: int = DEFAULT_DATA_START, value_col: str = "MissPenalty"
+) -> pd.DataFrame:
     """Full L1 miss rows (not just the MissPenalty array) — needed as the left
-    side of the state join."""
-    df = pd.read_csv(
-        filepath, usecols=["Address", "Core", "StartCycle", "EndCycle", "MissPenalty"]
-    )
+    side of the state join.
+
+    `value_col` is the metric carried through the join. Use "Latency" for L1
+    MSHR occupancy (New L1 Request -> L1 Request MSHR Free; identical to the
+    MSHROccupancy column, but also present in older CSVs). The StartCycle and
+    MissPenalty >= 10 filters are applied regardless of `value_col`, so every
+    L1 metric is computed over the same population of misses."""
+    usecols = list(dict.fromkeys(
+        ["Address", "Core", "StartCycle", "EndCycle", "MissPenalty", value_col]
+    ))
+    df = pd.read_csv(filepath, usecols=usecols)
     df["MissPenalty"] = df["MissPenalty"].astype(np.uint16)
     mask = (df["StartCycle"] >= data_start) & (df["MissPenalty"] >= 10)
-    return df.loc[mask].reset_index(drop=True)
+    df = df.loc[mask].reset_index(drop=True)
+    df[value_col] = df[value_col].astype(np.uint16)
+    return df
 
 
 def load_llc_full_df(filepath: str) -> pd.DataFrame:
@@ -705,10 +716,15 @@ def load_miss_penalty_faceted(
     facet_groups: list[dict],
     data_start: int = DEFAULT_DATA_START,
     label: str = "",
-    join_by_core: bool = True
+    join_by_core: bool = True,
+    value_col: str = "MissPenalty",
 ) -> list[tuple[str, np.ndarray, np.ndarray]]:
-    l1_ctrl = load_l1_miss_penalty_df(l1_ctrl_path, data_start)
-    l1_mod = load_l1_miss_penalty_df(l1_mod_path, data_start)
+    """Faceted L1 metric. `value_col` selects the metric: "MissPenalty"
+    (default) or "Latency" for L1 MSHR occupancy (see load_l1_occup_faceted).
+    Set join_by_core=False for 6/8-core tests (and don't use "cores" in the
+    facet groups there)."""
+    l1_ctrl = load_l1_miss_penalty_df(l1_ctrl_path, data_start, value_col)
+    l1_mod = load_l1_miss_penalty_df(l1_mod_path, data_start, value_col)
     llc_ctrl = load_llc_full_df(llc_ctrl_path)
     llc_mod = load_llc_full_df(llc_mod_path)
 
@@ -717,9 +733,91 @@ def load_miss_penalty_faceted(
 
     results = []
     for group in facet_groups:
-        stock = apply_facet_group(joined_ctrl, group)["MissPenalty"].to_numpy(dtype=np.uint16)
-        mod = apply_facet_group(joined_mod, group)["MissPenalty"].to_numpy(dtype=np.uint16)
+        stock = apply_facet_group(joined_ctrl, group)[value_col].to_numpy(dtype=np.uint16)
+        mod = apply_facet_group(joined_mod, group)[value_col].to_numpy(dtype=np.uint16)
         results.append((group["label"], stock, mod))
+    return results
+
+
+def load_l1_occup_faceted(
+    l1_ctrl_path: str, l1_mod_path: str,
+    llc_ctrl_path: str, llc_mod_path: str,
+    facet_groups: list[dict],
+    data_start: int = DEFAULT_DATA_START,
+    label: str = "",
+    join_by_core: bool = True,
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    """L1 MSHR occupancy faceted by the state of the LLC transaction that
+    served each miss (same join as load_miss_penalty_faceted)."""
+    return load_miss_penalty_faceted(
+        l1_ctrl_path, l1_mod_path, llc_ctrl_path, llc_mod_path, facet_groups,
+        data_start=data_start, label=label, join_by_core=join_by_core,
+        value_col="Latency",
+    )
+
+
+# ------------------------------------------------------------------
+# LLC MSHR occupancy, faceted.  The -llc-mshr.csv already carries Opcode and
+# the state flags, so no join is needed.
+#   kind="acq": AcquireBlock rows; the only kind where Load/Store is valid
+#               (Param is NtoB=0 / NtoT=1 / BtoT=2).
+#   kind="rel": Release / ReleaseData rows; flag and opcode facets only.
+# "cores" facets need SOURCE_ID_MAP, which only covers the 4-core config, so
+# Core is only derived when a group asks for it (omit "cores" for 6/8 cores).
+# ------------------------------------------------------------------
+
+def load_llc_occup_df(
+    filepath: str,
+    kind: str,
+    data_start: int = DEFAULT_DATA_START,
+    with_core: bool = False,
+) -> pd.DataFrame:
+    if kind not in ("acq", "rel"):
+        raise ValueError(f"kind must be 'acq' or 'rel', got {kind!r}")
+
+    usecols = ["SourceID", "Opcode", "StartCycle", "Occupancy"] + FLAG_COLUMNS
+    if kind == "acq":
+        usecols.append("Param")
+    df = pd.read_csv(filepath, usecols=usecols)
+
+    df["Opcode"] = df["Opcode"].str.strip()
+    if kind == "acq":
+        opcode_mask = df["Opcode"] == "AcquireBlock"
+    else:
+        opcode_mask = df["Opcode"].isin(RELEASE_OPCODES)
+    df = df.loc[opcode_mask & (df["StartCycle"] >= data_start)].copy()
+
+    if kind == "acq":
+        df["NodeType"] = np.where(normalize_hex(df["Param"]).isin([1, 2]), "Store", "Load")
+    if with_core:
+        df["Core"] = normalize_hex(df["SourceID"]).map(
+            lambda sid: SOURCE_ID_MAP.get(sid, (None, None))[0]
+        )
+    return df.reset_index(drop=True)
+
+
+def load_llc_occup_faceted(
+    ctrl_path: str, mod_path: str,
+    facet_groups: list[dict],
+    kind: str,
+    data_start: int = DEFAULT_DATA_START,
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    """LLC MSHR occupancy per facet group -> [(label, stock, mod), ...]."""
+    if kind == "rel" and any(
+        f.lstrip("!") in ("Load", "Store")
+        for g in facet_groups for f in g.get("flags", [])
+    ):
+        raise ValueError("Load/Store facets are only valid for kind='acq'")
+
+    with_core = any(g.get("cores") for g in facet_groups)
+    ctrl = load_llc_occup_df(ctrl_path, kind, data_start, with_core)
+    mod = load_llc_occup_df(mod_path, kind, data_start, with_core)
+
+    results = []
+    for group in facet_groups:
+        stock = apply_facet_group(ctrl, group)["Occupancy"].to_numpy(dtype=np.uint16)
+        modv = apply_facet_group(mod, group)["Occupancy"].to_numpy(dtype=np.uint16)
+        results.append((group["label"], stock, modv))
     return results
 
 
